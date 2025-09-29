@@ -1,0 +1,8 @@
+# Ignore build output and IDE files
+target/
+.mvn/wrapper/maven-wrapper.jar
+.idea/
+.git/
+*.class
+*.log
+.DS_Store
