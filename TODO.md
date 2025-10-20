@@ -1,12 +1,12 @@
 Functionality
 =============
-- Mix blobs to blob
 - Support configurable "mix packages"
 - Add job that generates a full package
 
-Cleanup
-=======
+Tech Debt
+=========
 - UNIT TESTS
+- INTEGRATION TESTS
 
 Refactor
 ========
