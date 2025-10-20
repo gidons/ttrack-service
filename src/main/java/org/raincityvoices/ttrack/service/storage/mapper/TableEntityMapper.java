@@ -1,0 +1,149 @@
+package org.raincityvoices.ttrack.service.storage.mapper;
+
+import java.beans.PropertyDescriptor;
+import java.beans.Transient;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
+
+import com.azure.data.tables.implementation.TablesConstants;
+import com.azure.data.tables.models.TableEntity;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+
+/**
+ * A serializer/deserializer for table entities, similar to DDB's DynamoDBMapper.
+ */
+public class TableEntityMapper<E> {
+
+    private final Class<E> entityClass;
+
+    private final ImmutableList<PropertyHandler<E>> propertyHandlers;
+    private final Constructor<E> constructor;
+
+    public TableEntityMapper(Class<E> entityClass) {
+        this.entityClass = entityClass;
+        propertyHandlers = findPropertyProviders(entityClass);
+        constructor = findConstructor(entityClass);
+    }
+
+    private Constructor<E> findConstructor(Class<E> cls) {
+        try {
+            return entityClass.getConstructor();
+        } catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Class " + entityClass + " does not have a no-arg constructor.");
+        } catch (SecurityException e) {
+            throw new RuntimeException("Failed to get a no-arg constructor for class " + entityClass, e);
+        }
+    }
+
+    public TableEntity toTableEntity(E pojo) {
+        List<PropertyValue> propertyDescriptors = propertyHandlers.stream()
+                .map(pp -> pp.getProperty(pojo))
+                .toList();
+        Map<String, Object> properties = new HashMap<>();
+        for (PropertyValue pd : propertyDescriptors) {
+            pd.addToMap(properties);
+        }
+        Object partitionKey = properties.remove(TablesConstants.PARTITION_KEY);
+        if (partitionKey == null) {
+            throw new IllegalArgumentException("Missing PartitionKey property");
+        }
+        Object rowKey = properties.remove(TablesConstants.ROW_KEY);
+        if (rowKey == null) {
+            rowKey = "";
+        }
+        TableEntity entity = new TableEntity((String) partitionKey, (String) rowKey);
+        entity.setProperties(properties);
+        return entity;
+    }
+
+    public E fromTableEntity(TableEntity entity) {
+        final E pojo;
+        try {
+            pojo = constructor.newInstance();
+        } catch(Exception e) {
+            throw new RuntimeException("Failed to instantiate " + entityClass, e);
+        }
+        for (PropertyHandler<E> ph : propertyHandlers) {
+            try {
+                ph.setPropertyFromEntity(pojo, entity);
+            } catch(IllegalArgumentException e) {
+                throw new IllegalArgumentException("Unsupported value for property " + ph.getName(), e);
+            } catch(Exception e) {
+                throw new RuntimeException("Failed to set value for property " + ph.getName(), e);
+            }
+        }
+        return pojo;
+    }
+
+    @VisibleForTesting
+    ImmutableList<PropertyHandler<E>> findPropertyProviders(Class<E> cls) {
+        ImmutableList.Builder<PropertyHandler<E>> builder = ImmutableList.builder();
+        PropertyDescriptor[] beanProps = BeanUtils.getPropertyDescriptors(entityClass);
+        for (java.beans.PropertyDescriptor bp : beanProps) {
+            if (bp.getName().equals("class")) { continue; }
+            PropertyHandler<E> handler = createPropertyHandler(bp);
+            if (handler != null) {
+                builder.add(handler);
+            }
+        }
+        return builder.build();
+    }
+
+    @VisibleForTesting 
+    static <E> PropertyHandler<E> createPropertyHandler(PropertyDescriptor descriptor) {
+        Method getter = descriptor.getReadMethod();
+        if (getter == null) {
+            return null;
+        }
+        if (getter.getAnnotation(Transient.class) != null) {
+            return null;
+        }
+        final String name;
+        final String odataType;
+        Property propAnnotation = getter.getAnnotation(Property.class);
+        if (getter.getAnnotation(PartitionKey.class) != null) {
+            name = TablesConstants.PARTITION_KEY;
+        } else if (getter.getAnnotation(RowKey.class) != null) {
+            name = TablesConstants.ROW_KEY;
+        } else if (propAnnotation != null && !propAnnotation.value().isBlank()) {
+            name = propAnnotation.value();
+        } else {
+            // This allows a property named "parititionKey" or "rowKey" to be used as PK or RK.
+            // It also conforms to the apparent standard PascalCase convention for Tables properties.
+            name = StringUtils.capitalize(descriptor.getName());
+        }
+        if (name.equals(TablesConstants.PARTITION_KEY) || name.equals(TablesConstants.ROW_KEY)) {
+            if (getter.getReturnType() != String.class) {
+                throw new IllegalArgumentException("Property used for " + name + " is not a String");
+            }
+        }
+
+        boolean jsonSerialize = false;
+        String annotatedType = (propAnnotation != null) ? StringUtils.trim(propAnnotation.type()) : null;
+        if (annotatedType == null) {
+            odataType = null;
+        } else if (annotatedType.startsWith("Edm.")) {
+            odataType = annotatedType;
+        } else if (annotatedType.equals("json")) {
+            odataType = null;
+            jsonSerialize = true;
+        } else {
+            throw new IllegalArgumentException("Unsupported type '" + annotatedType + "' in @Property: only EDM type tags or 'json' are allowed.");
+        }
+
+        PropertyHandler<E> baseHandler = new BeanUtilsPropertyHandler<>(name, descriptor, odataType);
+        if (jsonSerialize) {
+            return new JsonPropertyHandlerDecorator<>(baseHandler, TypeFactory.defaultInstance().constructType(getter.getGenericReturnType()));
+        } else {
+            return baseHandler;
+        }
+    }
+}

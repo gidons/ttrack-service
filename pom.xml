@@ -32,6 +32,13 @@
 		<netty-version>4.1.127.Final</netty-version>
 		<netty-tcnative.version>2.0.73.Final</netty-tcnative.version>
 	</properties>
+	<repositories>
+		<repository>
+		  	<id>be.0110.repo-releases</id>
+  			<name>0110.be repository</name>
+  			<url>https://mvn.0110.be/releases</url>
+		</repository>
+	</repositories>
 	<dependencies>
 		<!-- Lombok for concise model classes -->
 		<dependency>
@@ -49,8 +56,17 @@
 			<artifactId>spring-cloud-azure-starter-data-cosmos</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.azure</groupId>
+			<artifactId>azure-data-tables</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.azure.spring</groupId>
 			<artifactId>spring-cloud-azure-starter-storage</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>3.19.0</version>
 		</dependency>
 
 		<dependency>
@@ -67,6 +83,46 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>33.5.0-jre</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-collections4</artifactId>
+			<version>4.5.0</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.20.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.17</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.5.15</version>
+		</dependency>
+		<dependency>
+			<groupId>info.picocli</groupId>
+			<artifactId>picocli</artifactId>
+			<version>4.7.7</version>
+		</dependency>
+		<dependency>
+			<groupId>be.tarsos.dsp</groupId>
+			<artifactId>core</artifactId>
+			<version>2.5</version>
+		</dependency>
+		<dependency>
+			<groupId>be.tarsos.dsp</groupId>
+			<artifactId>jvm</artifactId>
+			<version>2.5</version>
 		</dependency>
 	</dependencies>
 	<dependencyManagement>

@@ -1,0 +1,7 @@
+package org.raincityvoices.ttrack.service.util;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Retention(RetentionPolicy.RUNTIME)
+public @interface StrId {}

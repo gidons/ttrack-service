@@ -2,3 +2,14 @@ server:
   port: 8080
 application:
   name: ttrack-service
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+azure:
+  tables:
+    endpoint: https://shavitttrackwestus.table.core.windows.net/
+  blobs:
+    endpoint: https://shavitttrackwestus.blob.core.windows.net/
