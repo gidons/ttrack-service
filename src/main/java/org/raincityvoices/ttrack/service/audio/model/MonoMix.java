@@ -3,7 +3,8 @@ package org.raincityvoices.ttrack.service.audio.model;
 import java.nio.FloatBuffer;
 import java.util.stream.Stream;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -14,7 +15,6 @@ import lombok.extern.jackson.Jacksonized;
 @Value
 @EqualsAndHashCode(exclude = "sample")
 @Jacksonized
-@JsonIgnoreProperties({"sample"})
 public class MonoMix implements AudioMix {
     private static final double TOTAL_FACTOR_TOLERANCE = 0.0001;
 
@@ -23,9 +23,11 @@ public class MonoMix implements AudioMix {
      * the audio from the ith input part when mixing.
      */
     float[] mixFactors;
+    @JsonIgnore
     float[] sample;
 
-    public MonoMix(float[] mixFactors) {
+    @JsonCreator
+    public MonoMix(float... mixFactors) {
         this.mixFactors = mixFactors.clone();
         this.sample = new float[numInputs()];
         validate();

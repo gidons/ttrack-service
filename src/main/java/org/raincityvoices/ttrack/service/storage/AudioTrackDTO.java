@@ -2,7 +2,6 @@ package org.raincityvoices.ttrack.service.storage;
 
 import java.beans.Transient;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -16,6 +15,7 @@ import org.raincityvoices.ttrack.service.storage.mapper.BaseDTO;
 import org.raincityvoices.ttrack.service.storage.mapper.PartitionKey;
 import org.raincityvoices.ttrack.service.storage.mapper.Property;
 import org.raincityvoices.ttrack.service.storage.mapper.RowKey;
+import org.raincityvoices.ttrack.service.storage.mapper.Timestamp;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -56,7 +56,8 @@ public class AudioTrackDTO extends BaseDTO {
     /** When the track was created (metadata only) */
     Instant created;
     /** When the track was processed and the audio blob created, or null if not processed yet. */
-    Instant processed;
+    @Getter(onMethod = @__(@Timestamp))
+    Instant updated;
     /** The name of the blob in the "song-media" blob container. */
     String blobName;
 
@@ -73,9 +74,8 @@ public class AudioTrackDTO extends BaseDTO {
             .id(track.trackId())
             .blobName(track.blobName())
             .audioMix(null)
-            // TODO probably want to pass timestamps to/from web model
-            .created(Instant.now())
-            .processed(track.isProcessed() ? Instant.now() : null);
+            .created(track.created())
+            .updated(track.updated());
     }
 
     public static AudioTrackDTO fromPartTrack(PartTrack track) {
@@ -90,7 +90,6 @@ public class AudioTrackDTO extends BaseDTO {
             .audioMix(track.mix())
             .parts(track.parts().stream().map(AudioPart::name).toList())
             .build();
-
     }
 
     public AudioTrack toAudioTrack() {
@@ -105,6 +104,8 @@ public class AudioTrackDTO extends BaseDTO {
             .parts(parts.stream().map(AudioPart::new).toList())
             .mix(audioMix)
             .blobName(blobName)
+            .created(created)
+            .updated(updated)
             .build();
     }
 
@@ -114,6 +115,8 @@ public class AudioTrackDTO extends BaseDTO {
                 .songId(new SongId(songId))
                 .part(new AudioPart(id))
                 .blobName(blobName)
+                .created(created)
+                .updated(updated)
                 .build();
     }   
 }

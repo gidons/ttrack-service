@@ -2,16 +2,11 @@ package org.raincityvoices.ttrack.service.storage;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.List;
 
-import org.raincityvoices.ttrack.service.FileMetadata;
 import org.raincityvoices.ttrack.service.MediaContent;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
-
-import com.azure.storage.blob.models.BlobProperties;
 
 public interface SongStorage {
 

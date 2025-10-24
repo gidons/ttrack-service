@@ -30,8 +30,6 @@ import picocli.CommandLine.Parameters;
 @Slf4j
 public class WavProcessor {
 
-    private static final int AUDIO_BUFFER_FRAMES = 1<<16;
-
     @Command(name = "info", description = "Display information about a WAV file")
     public static class FileInfo implements Callable<Integer> {
 

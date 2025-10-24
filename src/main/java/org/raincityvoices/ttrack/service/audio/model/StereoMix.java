@@ -5,7 +5,6 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
 import lombok.Value;
@@ -36,15 +35,14 @@ public class StereoMix implements AudioMix {
     float[] sample;
 
     @JsonCreator
-    public StereoMix(@JsonProperty("leftFactors") float[] leftMixFactors, 
-                     @JsonProperty("rightFactors") float[] rightMixFactors) {
-        Preconditions.checkNotNull(leftMixFactors);
-        Preconditions.checkNotNull(rightMixFactors);
-        Preconditions.checkArgument(leftMixFactors.length == rightMixFactors.length);
-        this.leftFactors = leftMixFactors;
-        this.rightFactors = rightMixFactors;
-        this.leftMix = new MonoMix(leftMixFactors);
-        this.rightMix = new MonoMix(rightMixFactors);
+    public StereoMix(float[] leftFactors, float[] rightFactors) {
+        Preconditions.checkNotNull(leftFactors);
+        Preconditions.checkNotNull(rightFactors);
+        Preconditions.checkArgument(leftFactors.length == rightFactors.length);
+        this.leftFactors = leftFactors;
+        this.rightFactors = rightFactors;
+        this.leftMix = new MonoMix(leftFactors);
+        this.rightMix = new MonoMix(rightFactors);
         this.sample = new float[numInputs()];
     }
 

@@ -114,7 +114,7 @@ public class SongController {
     @GetMapping("/{id}/mixes")
     public List<MixTrack> listMixesForSong(@PathVariable("id") SongId songId) {
         log.info("Starting listMixesForSong for id {}", songId);
-        List<AudioTrackDTO> trackDtos = songStorage.listTracksForSong(songId);
+        List<AudioTrackDTO> trackDtos = songStorage.listMixesForSong(songId);
         log.info("Loaded tracks: ");
         trackDtos.forEach(o -> log.info("Track: {}", o));
         return trackDtos.stream()

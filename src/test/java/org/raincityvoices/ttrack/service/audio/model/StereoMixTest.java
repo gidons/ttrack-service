@@ -9,6 +9,7 @@ import java.nio.FloatBuffer;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.model.TestData;
+import org.raincityvoices.ttrack.service.util.JsonUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,7 +48,7 @@ public class StereoMixTest {
     @Test
     public void jsonRoundTripWithParts() throws JsonProcessingException {
         StereoMix mix = MixUtils.parseStereoMix("full-mix", TestData.BBS_4_PARTS);
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = JsonUtils.newMapper();
         String json = mapper.writeValueAsString(mix);
         System.out.println(json);
         AudioMix recon = mapper.readValue(json, AudioMix.class);

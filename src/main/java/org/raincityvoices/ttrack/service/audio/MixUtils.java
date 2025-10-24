@@ -14,6 +14,10 @@ import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
+import org.raincityvoices.ttrack.service.util.JsonUtils;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,6 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 public class MixUtils {
 
     private static final float PREDOMINANT_WEIGHT = 4.0f;
+
+    private static final ObjectMapper MAPPER = JsonUtils.newMapper();
 
     /** 
      * Supported mix description formats:
@@ -31,6 +37,13 @@ public class MixUtils {
      */
     public static StereoMix parseStereoMix(String description, List<AudioPart> allParts) {
         log.info("Parsing stereo mix name: '{}'", description);
+        if (description.trim().startsWith("{")) {
+            try {
+                return MAPPER.readValue(description, StereoMix.class);
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("Unable to parse JSON as StereoMix: " + description, e);
+            }
+        }
         int numParts = allParts.size();
         List<String> tokens = List.of(description.split("\\W+", 0));
         List<Integer> partIndexes = new ArrayList<>();

@@ -163,7 +163,7 @@ public class SongStorageImpl implements SongStorage {
         
         trackDto.setBlobName(blobName);
         trackDto.setCreated(Instant.now());
-        trackDto.setProcessed(trackDto.getCreated());
+        trackDto.setUpdated(trackDto.getCreated());
         log.info("Writing metadata for track ID {} of song ID {}", trackDto.getId(), trackDto.getSongId());
         writeTrack(trackDto);
         return trackDto;

@@ -2,7 +2,6 @@ package org.raincityvoices.ttrack.service.storage.mapper;
 
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
-import java.time.Instant;
 import java.time.OffsetDateTime;
 
 import lombok.RequiredArgsConstructor;
@@ -46,10 +45,10 @@ public class BeanUtilsPropertyHandler<E> implements PropertyHandler<E> {
         if (setter() == null) {
             throw new RuntimeException("No setter for property " + name);
         }
-        if (value instanceof OffsetDateTime && getter().getReturnType() == Instant.class) {
-            value = ((OffsetDateTime)value).toInstant();
-        }
         try {
+            if (value instanceof OffsetDateTime) {
+                value = DateHelper.convertFromOffsetDateTime(value, getter().getReturnType());
+            }
             setter().invoke(pojo, value);
         } catch (Exception e) {
             throw new RuntimeException("Failed to set property using " + setter(), e);

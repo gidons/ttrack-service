@@ -113,6 +113,8 @@ public class TableEntityMapper<E> {
             name = TablesConstants.PARTITION_KEY;
         } else if (getter.getAnnotation(RowKey.class) != null) {
             name = TablesConstants.ROW_KEY;
+        } else if (getter.getAnnotation(Timestamp.class) != null) {
+            name = TablesConstants.TIMESTAMP_KEY;
         } else if (propAnnotation != null && !propAnnotation.value().isBlank()) {
             name = propAnnotation.value();
         } else {
@@ -123,6 +125,11 @@ public class TableEntityMapper<E> {
         if (name.equals(TablesConstants.PARTITION_KEY) || name.equals(TablesConstants.ROW_KEY)) {
             if (getter.getReturnType() != String.class) {
                 throw new IllegalArgumentException("Property used for " + name + " is not a String");
+            }
+        }
+        if (name.equals(TablesConstants.TIMESTAMP_KEY)) {
+            if (!DateHelper.SUPPORTED_TYPES.contains(getter.getReturnType())) {
+                throw new IllegalArgumentException("Property used for " + name + " is not a supported date/time type.");
             }
         }
 
@@ -140,7 +147,9 @@ public class TableEntityMapper<E> {
         }
 
         PropertyHandler<E> baseHandler = new BeanUtilsPropertyHandler<>(name, descriptor, odataType);
-        if (jsonSerialize) {
+        if (name.equals(TablesConstants.TIMESTAMP_KEY)) {
+            return new TimestampPropertyHandlerDecorator<>(baseHandler, getter.getReturnType());
+        } else if (jsonSerialize) {
             return new JsonPropertyHandlerDecorator<>(baseHandler, TypeFactory.defaultInstance().constructType(getter.getGenericReturnType()));
         } else {
             return baseHandler;

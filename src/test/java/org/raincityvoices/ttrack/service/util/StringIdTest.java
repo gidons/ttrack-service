@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class StringIdTest {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = JsonUtils.newMapper();
 
     private static class IdA extends StringId {
         public IdA(String value) { super(value); }
@@ -64,13 +64,13 @@ public class StringIdTest {
 
     @Test
     void GIVEN_id_WHEN_map_to_json_THEN_returns_value_as_json_string() throws JsonProcessingException {
-        assertEquals("\"foo\"", mapper.writeValueAsString(new IdA("foo")));
-        assertEquals("\"foo\"", mapper.writeValueAsString(new IdB("foo")));
+        assertEquals("\"foo\"", MAPPER.writeValueAsString(new IdA("foo")));
+        assertEquals("\"foo\"", MAPPER.writeValueAsString(new IdB("foo")));
     }
 
     @Test
     void GIVEN_json_string_value_WHEN_map_from_json_THEN_returns_id_object() throws JsonMappingException, JsonProcessingException {
-        assertEquals(new IdA("foo"), mapper.readValue("\"foo\"", IdA.class));
-        assertEquals(new IdB("foo"), mapper.readValue("\"foo\"", IdB.class));
+        assertEquals(new IdA("foo"), MAPPER.readValue("\"foo\"", IdA.class));
+        assertEquals(new IdB("foo"), MAPPER.readValue("\"foo\"", IdB.class));
     }
 }

@@ -10,6 +10,7 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
+import org.apache.commons.lang3.Range;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 
@@ -25,9 +26,11 @@ public class AudioMixingStream extends AudioInputStream {
     private static class MixingStream extends InputStream {
         private final AudioInputStream[] inputStreams;
         private final AudioMix mix;
+        private final int bufferFrames;
+        /** Range, in seconds, of elapsed time in which to log debug information. */
+        private final Range<Double> debugRange;
         private final AudioFormat inputFormat;
         private final AudioFormat outputFormat;
-        private final int bufferFrames;
         private final ByteBuffer inBytes[];
         private final FloatBuffer inBuffers[];
         private final FloatBuffer outBuffer;
@@ -35,10 +38,15 @@ public class AudioMixingStream extends AudioInputStream {
         private int processedFrames = 0;
 
         public MixingStream(AudioInputStream[] inputStreams, AudioMix mix, int bufferFrames) {
+            this(inputStreams, mix, bufferFrames, Range.of(0.0, 0.0));
+        }
+
+        MixingStream(AudioInputStream[] inputStreams, AudioMix mix, int bufferFrames, Range<Double> debugRange) {
             Preconditions.checkArgument(inputStreams.length == mix.numInputs());
             this.inputStreams = inputStreams;
             this.mix = mix;
             this.bufferFrames = bufferFrames;
+            this.debugRange = debugRange;
             // TODO validate matching
             this.inputFormat = inputStreams[0].getFormat();
             Preconditions.checkArgument(inputFormat.getSampleSizeInBits() == 16, 
@@ -73,8 +81,7 @@ public class AudioMixingStream extends AudioInputStream {
             int numFrames = Math.min(len / outputFormat.getFrameSize(), bufferFrames);
             int bytesToRead = numFrames * inputFormat.getFrameSize();
             int minReadFrames = numFrames;
-            // boolean debug = (elapsedSec() >= 35.0 && elapsedSec() <= 36.0);
-            boolean debug = false;
+            boolean debug = debugRange.contains(elapsedSec());
             for (int i = 0; i < numInputs(); ++i) {
                 ByteBuffer bb = inBytes[i];
                 FloatBuffer fb = inBuffers[i];
@@ -128,6 +135,11 @@ public class AudioMixingStream extends AudioInputStream {
 
     public static AudioMixingStream create(AudioInputStream inputStreams[], AudioMix mix, int bufferFrames) {
         MixingStream mixingStream = new MixingStream(inputStreams, mix, bufferFrames);
+        return new AudioMixingStream(mixingStream);
+    }
+
+    public static AudioMixingStream create(AudioInputStream inputStreams[], AudioMix mix, int bufferFrames, Range<Double> debugRange) {
+        MixingStream mixingStream = new MixingStream(inputStreams, mix, bufferFrames, debugRange);
         return new AudioMixingStream(mixingStream);
     }
 

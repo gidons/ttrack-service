@@ -6,6 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.nio.FloatBuffer;
 
 import org.junit.jupiter.api.Test;
+import org.raincityvoices.ttrack.service.util.JsonUtils;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class MonoMixTest {
 
@@ -55,5 +59,14 @@ public class MonoMixTest {
         float[] factors = new float[] { 0.2f, 0.2f };
 
         assertThrows(IllegalStateException.class, () -> new MonoMix(factors));
+    }
+
+    @Test
+    public void testJsonRoundTrip() throws JsonProcessingException {
+        MonoMix original = new MonoMix(0.4f, 0.3f, 0.2f, 0.1f);
+        ObjectMapper mapper = JsonUtils.newMapper();
+        String json = mapper.writeValueAsString(original);
+        AudioMix recon = mapper.readValue(json, AudioMix.class);
+        assertEquals(original, recon);
     }
 }
