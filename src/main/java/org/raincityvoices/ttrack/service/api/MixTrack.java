@@ -1,9 +1,13 @@
 package org.raincityvoices.ttrack.service.api;
 
+import java.net.URI;
 import java.util.List;
 
+import org.raincityvoices.ttrack.service.SongController;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -18,6 +22,7 @@ import lombok.extern.jackson.Jacksonized;
 @SuperBuilder
 @Accessors(fluent = true)
 @Jacksonized // necessary because accessors aren't bean-like
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MixTrack extends AudioTrack {
 
     private final String name;
@@ -26,4 +31,10 @@ public class MixTrack extends AudioTrack {
 
     @Override
     public String trackId() { return name(); } 
+
+    @Override
+    public URI url() { return SongController.mixTrackUrl(songId(), name()); }
+
+    @Override
+    public URI mediaUrl() { return SongController.mixMediaUrl(songId(), name()); }
 }

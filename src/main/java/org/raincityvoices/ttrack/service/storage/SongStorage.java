@@ -4,41 +4,40 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
 
+import org.raincityvoices.ttrack.service.FileMetadata;
 import org.raincityvoices.ttrack.service.MediaContent;
-import org.raincityvoices.ttrack.service.api.SongId;
-import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 
 public interface SongStorage {
 
     /** @return The metadata for all songs in the system (empty list if none.) */ 
     List<SongDTO> listAllSongs();
     /** @return the metadata for the given song, if it exists; null if not. */
-    SongDTO describeSong(SongId songId);
+    SongDTO describeSong(String songId);
     /** 
      * Update the metadata for the given song, if it exists, or create a new one if not.
      * @return the ID of the new or existing song.
      */
-    SongId writeSong(SongDTO songDto);
+    String writeSong(SongDTO songDto);
     /** @return the metadata for all tracks created for the given song (empty list if none.) */
-    List<AudioTrackDTO> listTracksForSong(SongId songId);
-    default List<AudioTrackDTO> listPartsForSong(SongId songId) {
+    List<AudioTrackDTO> listTracksForSong(String songId);
+    default List<AudioTrackDTO> listPartsForSong(String songId) {
         return listTracksForSong(songId).stream()
             .filter(t -> t.isPartTrack())
             .collect(toImmutableList());
     }
-    default List<AudioTrackDTO> listMixesForSong(SongId songId) {
+    default List<AudioTrackDTO> listMixesForSong(String songId) {
         return listTracksForSong(songId).stream()
             .filter(t -> t.isMixTrack())
             .collect(toImmutableList());
     }
     /** @return the metadata for the given track of the given song. */
-    AudioTrackDTO describeTrack(SongId songId, String trackId);
+    AudioTrackDTO describeTrack(String songId, String trackId);
     /** @return the metadata for the given part of the given song, or null if there is no such part. */
-    default AudioTrackDTO describePart(SongId songId, AudioPart part) {
-        return describeTrack(songId, part.name());
+    default AudioTrackDTO describePart(String songId, String part) {
+        return describeTrack(songId, part);
     }
     /** @return the metadata for the track of the given song that has a mix with the given name, or null if there is none. */
-    default AudioTrackDTO describeMix(SongId songId, String mixName) {
+    default AudioTrackDTO describeMix(String songId, String mixName) {
         return describeTrack(songId, mixName);
     }
     /**
@@ -51,5 +50,6 @@ public interface SongStorage {
      */
     AudioTrackDTO uploadTrackAudio(AudioTrackDTO trackDto, MediaContent media);
     AudioTrackDTO writeTrack(AudioTrackDTO trackDto);
-    MediaContent readMedia(String blobNam);
+    AudioTrackDTO updateTrackMetadata(AudioTrackDTO trackDto, FileMetadata metadata);
+    MediaContent downloadMedia(AudioTrackDTO trackDTO);
 }

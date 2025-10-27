@@ -1,12 +1,12 @@
 package org.raincityvoices.ttrack.service.storage;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 
 import org.raincityvoices.ttrack.service.FileMetadata;
 import org.raincityvoices.ttrack.service.MediaContent;
-import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.storage.mapper.TableEntityMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -37,6 +37,8 @@ public class SongStorageImpl implements SongStorage {
 
     private final Random random = new Random();
 
+    private final Clock clock = Clock.systemUTC();
+
     @Override
     public List<SongDTO> listAllSongs() {
         log.info("Listing all songs");
@@ -46,10 +48,10 @@ public class SongStorageImpl implements SongStorage {
     }
 
     @Override
-    public SongDTO describeSong(SongId songId) {
+    public SongDTO describeSong(String songId) {
         log.info("Reading song with ID {}", songId);
         try {
-            TableEntity entity = songsClient.getEntity(songId.value(), "");
+            TableEntity entity = songsClient.getEntity(songId, "");
             log.debug("Table entity: {}", entity.getProperties());
             return songMapper.fromTableEntity(entity);
         } catch (TableServiceException e) {
@@ -64,7 +66,7 @@ public class SongStorageImpl implements SongStorage {
     }
 
     @Override
-    public SongId writeSong(SongDTO songDto) {
+    public String writeSong(SongDTO songDto) {
         log.info("Writing song with ID {}", songDto.getId());
         log.debug("Song details: {}", songDto);
         if (songDto.getId().isEmpty()) {
@@ -77,7 +79,7 @@ public class SongStorageImpl implements SongStorage {
         } catch(Exception e) {
             throw new RuntimeException("Failed to write song " + songDto.getId() + " to table.", e);
         }
-        return new SongId(songDto.getId());
+        return songDto.getId();
     }
 
     /**
@@ -89,11 +91,11 @@ public class SongStorageImpl implements SongStorage {
     }
 
     @Override
-    public List<AudioTrackDTO> listTracksForSong(SongId songId) {
+    public List<AudioTrackDTO> listTracksForSong(String songId) {
         Preconditions.checkNotNull(songId);
         // TODO Check for existence of the song?
         log.info("Listing tracks for song ID {}", songId);
-        String query = String.format("PartitionKey eq '%s' and RowKey ne ''", songId.value());
+        String query = String.format("PartitionKey eq '%s' and RowKey ne ''", songId);
         log.debug("Query: {}", query);
         PagedIterable<TableEntity> results = songsClient.listEntities(new ListEntitiesOptions()
             .setFilter(query), null, null);
@@ -101,12 +103,12 @@ public class SongStorageImpl implements SongStorage {
     }
 
     @Override
-    public AudioTrackDTO describeTrack(SongId songId, String trackId) {
+    public AudioTrackDTO describeTrack(String songId, String trackId) {
         Preconditions.checkNotNull(songId);
         Preconditions.checkNotNull(trackId);
         log.info("Reading track with ID {} for song ID {}", trackId, songId);
         try {
-            TableEntity entity = songsClient.getEntity(songId.value(), trackId);
+            TableEntity entity = songsClient.getEntity(songId, trackId);
             log.debug("Table entity: {}", entity.getProperties());
             return trackMapper.fromTableEntity(entity);
         } catch (TableServiceException e) {
@@ -142,6 +144,9 @@ public class SongStorageImpl implements SongStorage {
         return trackDto;
     }
 
+    /**
+     * Upload the given media for the given track.
+     */
     public AudioTrackDTO uploadTrackAudio(AudioTrackDTO trackDto, MediaContent media) {
         Preconditions.checkNotNull(trackDto);
         Preconditions.checkNotNull(media);
@@ -156,15 +161,25 @@ public class SongStorageImpl implements SongStorage {
         try {
             BlobClient blobClient = mediaContainerClient.getBlobClient(blobName);
             blobClient.upload(media.stream(), true);
-            blobClient.setHttpHeaders(media.metadata().toBlobHttpHeaders());
         } catch(Exception e) {
             throw new RuntimeException("Failed to upload audio for track " + trackDto.getId(), e);
         }
-        
-        trackDto.setBlobName(blobName);
-        trackDto.setCreated(Instant.now());
-        trackDto.setUpdated(trackDto.getCreated());
-        log.info("Writing metadata for track ID {} of song ID {}", trackDto.getId(), trackDto.getSongId());
+        log.info("Audio upload complete.");
+
+        updateTrackMetadata(trackDto, media.metadata());
+        return trackDto;
+    }
+
+    public AudioTrackDTO updateTrackMetadata(AudioTrackDTO trackDto, FileMetadata metadata) {
+        log.info("Writing updated metadata: {}", trackDto);
+        try {
+            BlobClient blobClient = mediaContainerClient.getBlobClient(trackDto.getBlobName());
+            blobClient.setHttpHeaders(metadata.toBlobHttpHeaders());
+        } catch(Exception e) {
+            throw new RuntimeException("Failed to update blob metadata for track " + trackDto.getId(), e);
+        }
+        trackDto.setDurationSec((int)metadata.durationSec());
+        log.info("Writing updated metadata: {}", trackDto);
         writeTrack(trackDto);
         return trackDto;
     }
@@ -176,8 +191,10 @@ public class SongStorageImpl implements SongStorage {
     }
 
     @Override
-    public MediaContent readMedia(String blobName) {
-        BlobClient blobClient = mediaContainerClient.getBlobClient(blobName);
+    public MediaContent downloadMedia(AudioTrackDTO trackDto) {
+        Preconditions.checkNotNull(trackDto);
+        Preconditions.checkNotNull(trackDto.getBlobName());
+        BlobClient blobClient = mediaContainerClient.getBlobClient(trackDto.getBlobName());
         BlobInputStream stream = blobClient.openInputStream();
         return new MediaContent(stream, FileMetadata.fromBlobProperties(blobClient.getProperties()));
     }

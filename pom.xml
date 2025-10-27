@@ -38,8 +38,36 @@
   			<name>0110.be repository</name>
   			<url>https://mvn.0110.be/releases</url>
 		</repository>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
 	</repositories>
 	<dependencies>
+		<!-- Actuator and Micrometer for observability -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-core</artifactId>
+		</dependency>
+		<!-- Micrometer registries: logging (for logs) and azure-monitor exporter -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<dependency>
+  			<groupId>io.micrometer</groupId>
+  			<artifactId>micrometer-registry-prometheus-simpleclient</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-azure-monitor</artifactId>
+		</dependency>
+
 		<!-- Lombok for concise model classes -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -147,6 +175,14 @@
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
+			<dependency>
+				<groupId>io.micrometer</groupId>
+				<artifactId>micrometer-bom</artifactId>
+				<version>1.15.5</version>
+				<scope>import</scope>
+				<type>pom</type>
+			</dependency>
+			<!-- micrometer versions managed explicitly on the registry dependencies below -->
 			<dependency>
 				<groupId>com.fasterxml.jackson</groupId>
 				<artifactId>jackson-bom</artifactId>

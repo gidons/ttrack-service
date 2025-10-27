@@ -3,7 +3,6 @@ package org.raincityvoices.ttrack.service.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Instant;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.audio.model.MonoMix;
@@ -24,7 +23,6 @@ public class MixTrackTest {
             .name("some mix")
             .parts(TestData.BBS_4_PARTS)
             .mix(new MonoMix(0.1f, 0.2f, 0.3f, 0.4f))
-            .blobName("the blob")
             .created(Instant.now().minusSeconds(5))
             .updated(Instant.now())
             .build();

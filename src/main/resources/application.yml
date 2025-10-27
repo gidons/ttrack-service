@@ -8,6 +8,26 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+  mvc:
+    observation:
+      enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      logging:
+        enabled: true
+        step: 30s
+      azuremonitor:
+        enabled: ${AZURE_MONITOR_ENABLED:false}
+        # set via environment or secrets when available
+        connection-string: ${AZURE_MONITOR_CONNECTION_STRING:}
 azure:
   tables:
     endpoint: https://shavitttrackwestus.table.core.windows.net/

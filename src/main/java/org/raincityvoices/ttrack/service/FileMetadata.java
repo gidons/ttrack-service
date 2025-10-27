@@ -1,6 +1,11 @@
 package org.raincityvoices.ttrack.service;
 
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFileFormat.Type;
+
+import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.springframework.http.ContentDisposition;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.azure.storage.blob.models.BlobHttpHeaders;
@@ -18,6 +23,7 @@ public class FileMetadata {
     @With String fileName;
     @With String contentType;
     @With long lengthBytes;
+    @With float durationSec;
 
     public static FileMetadata fromMultipartFile(MultipartFile mpFile) {
         return FileMetadata.builder()
@@ -32,6 +38,24 @@ public class FileMetadata {
                 .fileName(inferFileName(props))
                 .contentType(props.getContentType())
                 .lengthBytes(props.getBlobSize())
+                .build();
+    }
+
+    public static FileMetadata fromAudioFileFormat(AudioFileFormat format) {
+        // NOTE: this doesn't set the filename.
+        return FileMetadata.builder()
+                .lengthBytes(format.getByteLength())
+                .contentType(Type.WAVE.equals(format.getType()) ? AudioFormats.WAV_TYPE : MimeTypeUtils.APPLICATION_OCTET_STREAM_VALUE)
+                .durationSec(format.getFrameLength() / format.getFormat().getFrameRate())
+                .build();
+    }
+
+    public FileMetadata updateFrom(FileMetadata other) {
+        return FileMetadata.builder()
+                .lengthBytes(other.lengthBytes() > 0 ? other.lengthBytes() : lengthBytes())
+                .contentType(other.contentType() != null ? other.contentType() : contentType())
+                .fileName(other.fileName() != null ? other.fileName() : fileName())
+                .durationSec(other.durationSec() > 0.0 ? other.durationSec() : durationSec())
                 .build();
     }
 

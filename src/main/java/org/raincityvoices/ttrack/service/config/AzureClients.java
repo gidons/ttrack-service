@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service;
+package org.raincityvoices.ttrack.service.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;

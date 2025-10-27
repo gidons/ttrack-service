@@ -8,6 +8,9 @@ import com.google.common.base.Preconditions;
 
 public class AudioFormats {
 
+    public static final String WAV_TYPE = "audio/wav";
+    public static final String WAV_EXT = ".wav";
+
     AudioFormat MONO_PCM_44_1KHZ = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 1, 2, 44100, false);
     AudioFormat STEREO_PCM_44_1KHZ = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 2, 4, 44100, false);
     AudioFormat QUATTRO_PCM_44_1KHZ = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 4, 8, 44100, false);

@@ -28,14 +28,15 @@ import lombok.NoArgsConstructor;
  * An audio track for a song. Can be a single-voice track or a mix.
  * Persisted in the Tracks table.
  * Tracks have a two-phase lifecycle: first, a track row is created with the metadata.
- * Next, the audio is processed and the blobName and processed timestamp are set.
- * From that point on, the track should be immutable.
+ * Next, the audio is processed and the blobName is set.
+ * 
+ * TODO Add ETag field to handle optimistic locking.
  */
 @Data
 @EqualsAndHashCode(callSuper = false) // ignore timestamp and ETag
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 public class AudioTrackDTO extends BaseDTO {
     /** Partition key, same as partition key of Song. */
     @Getter(onMethod=@__(@PartitionKey))
@@ -67,12 +68,14 @@ public class AudioTrackDTO extends BaseDTO {
     public boolean isMixTrack() { return CollectionUtils.isNotEmpty(parts) && audioMix != null; }
     @Transient
     public boolean isValid() { return isPartTrack() || isMixTrack(); }
+    @Transient
+    public boolean hasMedia() { return getBlobName() != null; }
 
     public static AudioTrackDTOBuilder fromAudioTrack(AudioTrack track) {
         return AudioTrackDTO.builder()
             .songId(track.songId().value())
             .id(track.trackId())
-            .blobName(track.blobName())
+            .blobName(null) // API track object doesn't store blob name
             .audioMix(null)
             .created(track.created())
             .updated(track.updated());
@@ -103,7 +106,6 @@ public class AudioTrackDTO extends BaseDTO {
             .name(id)
             .parts(parts.stream().map(AudioPart::new).toList())
             .mix(audioMix)
-            .blobName(blobName)
             .created(created)
             .updated(updated)
             .build();
@@ -114,7 +116,6 @@ public class AudioTrackDTO extends BaseDTO {
         return PartTrack.builder()
                 .songId(new SongId(songId))
                 .part(new AudioPart(id))
-                .blobName(blobName)
                 .created(created)
                 .updated(updated)
                 .build();

@@ -1,5 +1,6 @@
 package org.raincityvoices.ttrack.service.api;
 
+import java.net.URI;
 import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -17,14 +18,18 @@ import lombok.experimental.SuperBuilder;
 public abstract class AudioTrack {
     @JsonProperty("songId")
     SongId songId;
-    @JsonProperty("blobName")
-    String blobName;
     @JsonIgnore
     public abstract String trackId();
+    @JsonProperty("durationSec")
+    int durationSec;
     @JsonProperty("created")
     Instant created;
     @JsonProperty("updated")
     Instant updated;
+    @JsonProperty("url")
+    public abstract URI url();
+    @JsonProperty("mediaUrl")
+    public abstract URI mediaUrl();
     @JsonIgnore
-    public boolean isProcessed() { return blobName != null; }
+    public boolean isProcessed() { return mediaUrl() != null; }
 }

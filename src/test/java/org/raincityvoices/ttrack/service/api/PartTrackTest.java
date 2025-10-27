@@ -9,6 +9,7 @@ import org.raincityvoices.ttrack.service.model.TestData;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class PartTrackTest {
@@ -20,7 +21,6 @@ public class PartTrackTest {
         PartTrack track = PartTrack.builder()
             .songId(new SongId("the song"))
             .part(TestData.BARI)
-            .blobName("the blob")
             .build();
 
         assertEquals(track.trackId(), track.part().name());
@@ -31,7 +31,6 @@ public class PartTrackTest {
         PartTrack original = PartTrack.builder()
             .songId(new SongId("the song"))
             .part(TestData.BARI)
-            .blobName("the blob")
             .created(Instant.now().minusSeconds(5))
             .updated(Instant.now())
             .build();
@@ -41,5 +40,8 @@ public class PartTrackTest {
 
         PartTrack recon = mapper.readValue(json, PartTrack.class);
         assertEquals(original, recon);
+
+        JsonNode tree = mapper.readTree(json);
+        assertEquals("/songs/the%20song/parts/Bari", tree.get("url").asText());
     }
 }

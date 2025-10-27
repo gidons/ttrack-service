@@ -26,7 +26,9 @@ public class DateHelper {
     }
 
     public static OffsetDateTime convertToOffsetDateTime(Object value) {
-        if (value instanceof OffsetDateTime) { 
+        if (value == null) {
+            return null;
+        } else if (value instanceof OffsetDateTime) { 
             return (OffsetDateTime) value;
         } else if (value instanceof Instant) {
             return OffsetDateTime.ofInstant((Instant)value, UTC);
