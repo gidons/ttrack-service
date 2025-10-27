@@ -94,30 +94,4 @@ public class AudioTrackDTO extends BaseDTO {
             .parts(track.parts().stream().map(AudioPart::name).toList())
             .build();
     }
-
-    public AudioTrack toAudioTrack() {
-        return (parts == null) ? toPartTrack() : toMixTrack();
-    }
-
-    public MixTrack toMixTrack() {
-        assert CollectionUtils.isNotEmpty(parts) && audioMix != null;
-        return MixTrack.builder()
-            .songId(new SongId(songId))
-            .name(id)
-            .parts(parts.stream().map(AudioPart::new).toList())
-            .mix(audioMix)
-            .created(created)
-            .updated(updated)
-            .build();
-    }
-
-    public PartTrack toPartTrack() {
-        assert parts == null && audioMix == null;
-        return PartTrack.builder()
-                .songId(new SongId(songId))
-                .part(new AudioPart(id))
-                .created(created)
-                .updated(updated)
-                .build();
-    }   
 }

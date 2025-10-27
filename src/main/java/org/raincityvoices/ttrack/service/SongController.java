@@ -118,7 +118,7 @@ public class SongController {
         log.info("Loaded tracks: ");
         trackDtos.forEach(o -> log.info("Track: {}", o));
         return trackDtos.stream()
-                        .map(AudioTrackDTO::toPartTrack)
+                        .map(this::toPartTrack)
                         .toList();
     }
 
@@ -129,7 +129,7 @@ public class SongController {
         log.info("Loaded tracks: ");
         trackDtos.forEach(o -> log.info("Track: {}", o));
         return trackDtos.stream()
-                        .map(AudioTrackDTO::toMixTrack)
+                        .map(this::toMixTrack)
                         .toList();
     }
 
@@ -146,7 +146,7 @@ public class SongController {
     public PartTrack describePart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part) {
         log.info("Starting describePart for song ID {}, part {}", songId, part);
         AudioTrackDTO dto = songStorage.describePart(songId.value(), part.name());
-        return dto.toPartTrack();
+        return toPartTrack(dto);
     }
 
     @PutMapping("/{id}/parts/{partName}")
@@ -233,7 +233,7 @@ public class SongController {
             log.info("Track not found or missing blobName: dto={}", trackDto);
             throw new ErrorResponseException(HttpStatus.NOT_FOUND);
         }
-        return trackDto.toMixTrack();
+        return toMixTrack(trackDto);
     }
 
     @GetMapping("/{id}/mixes/{mixName}/media")
