@@ -26,14 +26,11 @@ public class PartTrack extends AudioTrack {
 
     private final AudioPart part;
 
-    @JsonIgnore
-    public String trackId() {
-        return part.name();
-    }
+    public String trackId() { return part.name(); }
 
     @Override
     public URI url() { return SongController.partTrackUrl(songId(), part()); }
 
     @Override
-    public URI mediaUrl() { return SongController.partMediaUrl(songId(), part()); }
+    public URI mediaUrl() { return hasMedia() ? SongController.partMediaUrl(songId(), part()) : null; }
 }

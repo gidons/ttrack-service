@@ -58,6 +58,7 @@ build/
 
 ### Generated data
 /*.wav
+/*.mp3
 
 /terraform/.terraform/
 /terraform/terraform.tfstate*

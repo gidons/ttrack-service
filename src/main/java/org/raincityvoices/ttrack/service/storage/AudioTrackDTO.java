@@ -8,7 +8,6 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.raincityvoices.ttrack.service.api.AudioTrack;
 import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
-import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.mapper.BaseDTO;
@@ -67,7 +66,7 @@ public class AudioTrackDTO extends BaseDTO {
     @Transient
     public boolean isMixTrack() { return CollectionUtils.isNotEmpty(parts) && audioMix != null; }
     @Transient
-    public boolean isValid() { return isPartTrack() || isMixTrack(); }
+    public boolean isValid() { return songId != null && id != null && isPartTrack() || isMixTrack(); }
     @Transient
     public boolean hasMedia() { return getBlobName() != null; }
 

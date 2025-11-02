@@ -13,9 +13,11 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
+import org.raincityvoices.ttrack.service.audio.AudioDebugger;
 import org.raincityvoices.ttrack.service.audio.AudioMixingStream;
 import org.raincityvoices.ttrack.service.audio.ChannelExtractingStream;
 import org.raincityvoices.ttrack.service.audio.MixUtils;
+import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 
@@ -65,8 +67,12 @@ public class WavProcessor {
         @Option(names = { "-o", "output" }, description = "The file to write the extracted channel to")
         private File outFile;
 
+        @Option(names = { "-d", "debug" }, arity = "0..2", description = "Start and end times (in seconds) for debug output.")
+        private Double[] debugRange;
+
         @Override
         public Integer call() throws Exception {
+            final AudioDebugger.Settings debugSettings = getDebugSettings(debugRange);
             AudioInputStream in = AudioSystem.getAudioInputStream(inFile);
             AudioFormat format = in.getFormat();
             int numChannels = format.getChannels();
@@ -78,11 +84,26 @@ public class WavProcessor {
                 log.error("Input file has only {} channels", numChannels);
                 return 2;
             }
-            ChannelExtractingStream stream = new ChannelExtractingStream(in, index, 1000);
+            AudioInputStream decoded = AudioSystem.getAudioInputStream(AudioFormats.toPcm(format), in);
+            ChannelExtractingStream stream = new ChannelExtractingStream(decoded, index, debugSettings);
             log.info("Writing output to " + outFile);
             AudioSystem.write(stream, Type.WAVE, outFile);
             return 0;
         }
+
+    }
+
+    @SuppressWarnings("null")
+    private AudioDebugger.Settings getDebugSettings(Double[] debugRange) {
+        final AudioDebugger.Settings debugSettings;
+        switch(debugRange == null ? 0 : debugRange.length) {
+            case 0: debugSettings = AudioDebugger.Settings.NONE; break;
+            case 1: debugSettings = new AudioDebugger.Settings(debugRange[0], debugRange[0] + 1.0); break;
+            case 2: debugSettings = new AudioDebugger.Settings(debugRange[0], debugRange[1]); break;
+            default: throw new IllegalStateException();
+        }
+        log.debug("debugSettings: {}", debugSettings);
+        return debugSettings;
     }
 
     @Command(name = "mix", description="Mix multiple input files to a single file")

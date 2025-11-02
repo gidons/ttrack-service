@@ -20,9 +20,11 @@ public class MixTrackTest {
     public void testJsonRoundTrip() throws JsonProcessingException {
         MixTrack original = MixTrack.builder()
             .songId(new SongId("the song"))
-            .name("some mix")
-            .parts(TestData.BBS_4_PARTS)
-            .mix(new MonoMix(0.1f, 0.2f, 0.3f, 0.4f))
+            .mixInfo(MixInfo.builder()
+                .name("some mix")
+                .parts(TestData.BBS_4_PARTS)
+                .mix(new MonoMix(0.1f, 0.2f, 0.3f, 0.4f))
+                .build())
             .created(Instant.now().minusSeconds(5))
             .updated(Instant.now())
             .build();

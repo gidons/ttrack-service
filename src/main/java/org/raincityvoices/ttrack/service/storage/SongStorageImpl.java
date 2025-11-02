@@ -1,7 +1,6 @@
 package org.raincityvoices.ttrack.service.storage;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 
@@ -125,14 +124,12 @@ public class SongStorageImpl implements SongStorage {
     @Override
     public AudioTrackDTO writeTrack(AudioTrackDTO trackDto) {
         Preconditions.checkNotNull(trackDto);
-        Preconditions.checkNotNull(trackDto.getSongId());
         Preconditions.checkArgument(trackDto.isValid());
         log.info("Writing track with ID {}", trackDto.getId());
         log.debug("Track details: {}", trackDto);
-        if (trackDto.getId().isEmpty()) {
-            // TODO Ensure this ID is unique within the song.
-            // TODO Prevent duplicates by checking for existing tracks with the same mix name.
-            trackDto.setId(createIdForTrack(trackDto));
+
+        if (trackDto.getCreated() == null) {
+            trackDto.setCreated(clock.instant());
         }
         try {
             TableEntity entity = trackMapper.toTableEntity(trackDto);
@@ -150,14 +147,12 @@ public class SongStorageImpl implements SongStorage {
     public AudioTrackDTO uploadTrackAudio(AudioTrackDTO trackDto, MediaContent media) {
         Preconditions.checkNotNull(trackDto);
         Preconditions.checkNotNull(media);
-        Preconditions.checkNotNull(trackDto.getSongId());
         Preconditions.checkArgument(trackDto.isValid());
-        if (trackDto.getId() == null) {
-            trackDto.setId(createIdForTrack(trackDto));
-        }
+
         log.info("Uploading audio for track ID {} of song ID {}", trackDto.getId(), trackDto.getSongId());
         log.debug("Content metadata: {}", media.metadata());
         String blobName = String.format("%s/%s", trackDto.getSongId(), trackDto.getId());
+        trackDto.setBlobName(blobName);
         try {
             BlobClient blobClient = mediaContainerClient.getBlobClient(blobName);
             blobClient.upload(media.stream(), true);

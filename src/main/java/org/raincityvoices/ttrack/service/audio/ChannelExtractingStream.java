@@ -10,6 +10,7 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
+import org.raincityvoices.ttrack.service.audio.AudioDebugger.Settings;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 
 import com.azure.cosmos.implementation.guava25.base.Preconditions;
@@ -28,8 +29,10 @@ public class ChannelExtractingStream extends AudioInputStream {
         private final AudioFormat outputFormat;
         private final ByteBuffer inBuffer;
         private final ByteOrder byteOrder;
+        private final AudioDebugger inDebugger;
+        private final AudioDebugger outDebugger;
 
-        public ExtractingStream(AudioInputStream inputStream, int channelIndex, int bufferFrames) {
+        public ExtractingStream(AudioInputStream inputStream, int channelIndex, int bufferFrames, Settings debugSettings) {
             this.inputStream = inputStream;
             this.channelIndex = channelIndex;
             this.bufferFrames = bufferFrames;
@@ -37,6 +40,8 @@ public class ChannelExtractingStream extends AudioInputStream {
             this.outputFormat = AudioFormats.forOutputChannels(inputFormat, 1);
             this.byteOrder = inputFormat.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN;
             this.inBuffer = ByteBuffer.allocate(bufferFrames * inputFormat.getFrameSize()).order(byteOrder);
+            this.inDebugger = new AudioDebugger("inBuffer", inputFormat, debugSettings);
+            this.outDebugger = new AudioDebugger("outBuffer", outputFormat, debugSettings);
             Preconditions.checkArgument(inputFormat.getSampleSizeInBits() == 16, 
                                         "Input sample size is " + inputFormat.getSampleSizeInBits() + "; only 16 supported.");
         }
@@ -51,20 +56,22 @@ public class ChannelExtractingStream extends AudioInputStream {
             inBuffer.rewind().limit(0);
             int numFrames = Math.min(len / outputFormat.getFrameSize(), bufferFrames);
             int bytesToRead = numFrames * inputFormat.getFrameSize();
-            boolean debug = false;
 
             int readBytes = inputStream.read(inBuffer.array(), 0, bytesToRead);
             int readFrames = readBytes / inputFormat.getFrameSize();
+            log.debug("Read {}/{} bytes/frames", readBytes, readFrames);
             if (readBytes < 0) {
                 // EOF. No data read.
                 return -1;
             }
             inBuffer.limit(readBytes).rewind();
-            if (debug) { MixUtils.logBuffer(inBuffer, "inBuffer"); }
+            inDebugger.logBuffer(inBuffer);
             ByteBuffer outBuffer = ByteBuffer.wrap(b, off, len).order(byteOrder);
             extract(inBuffer, outBuffer);
-            if (outBuffer.position() != readFrames * 2) {
-                log.warn("outBuffer.position = {}; expected {}", outBuffer.position(), readFrames * 2);
+            log.debug("outBuffer (post): pos:{} limit:{} remaining:{}", outBuffer.position(), outBuffer.limit(), outBuffer.remaining());
+            outDebugger.logBuffer(outBuffer);
+            if (outBuffer.limit() != readFrames * 2) {
+                log.warn("outBuffer.limit = {}; expected {}", outBuffer.limit(), readFrames * 2);
             }
             return readFrames * outputFormat.getFrameSize();
         }
@@ -80,11 +87,18 @@ public class ChannelExtractingStream extends AudioInputStream {
                     }
                 }
             }
+            outBytes.limit(outSamples.position() * 2);
         }
     }
 
+    public ChannelExtractingStream(AudioInputStream inputStream, int channelIndex, AudioDebugger.Settings debugSettings) {
+        super(new ExtractingStream(inputStream, channelIndex, 1000, debugSettings), 
+              AudioFormats.forOutputChannels(inputStream.getFormat(), 1), 
+              AudioSystem.NOT_SPECIFIED);
+    }
+
     public ChannelExtractingStream(AudioInputStream inputStream, int channelIndex, int bufferFrames) {
-        super(new ExtractingStream(inputStream, channelIndex, bufferFrames), 
+        super(new ExtractingStream(inputStream, channelIndex, bufferFrames, AudioDebugger.Settings.NONE), 
               AudioFormats.forOutputChannels(inputStream.getFormat(), 1), 
               AudioSystem.NOT_SPECIFIED);
     }

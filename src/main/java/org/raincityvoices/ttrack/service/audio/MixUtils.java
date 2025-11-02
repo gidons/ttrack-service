@@ -9,13 +9,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalInt;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 
+import com.azure.cosmos.implementation.guava25.collect.ImmutableList;
+import com.azure.cosmos.implementation.guava25.collect.Sets;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -27,6 +32,34 @@ public class MixUtils {
     private static final float PREDOMINANT_WEIGHT = 4.0f;
 
     private static final ObjectMapper MAPPER = JsonUtils.newMapper();
+
+    public static List<MixInfo> getParseableMixes(List<AudioPart> parts) {
+        if (parts.isEmpty()) {
+            return List.of();
+        }
+        ImmutableList.Builder<String> names = ImmutableList.builder();
+        names.add("Full Mix");
+        for (AudioPart part : parts) {
+            names
+                .add(part.name() + " Solo")
+                .add(part.name() + " Left")
+                .add(part.name() + " Dominant")
+                .add(part.name() + " Missing");
+        }
+        for (Set<AudioPart> duet : Sets.combinations(Set.copyOf(parts), 2)) {
+            names.add(duet.stream().map(AudioPart::name).collect(Collectors.joining(" ")) + " Duet");
+        }
+
+        return names.build().stream().map(n -> MixUtils.parseStereoMixInfo(n, parts)).toList();
+    }
+
+    public static MixInfo parseStereoMixInfo(String description, List<AudioPart> parts) {
+        return MixInfo.builder()
+            .name(description)
+            .parts(parts)
+            .mix(parseStereoMix(description, parts))
+            .build();
+    }
 
     /** 
      * Supported mix description formats:
@@ -50,12 +83,12 @@ public class MixUtils {
         List<String> other = new ArrayList<>();
         for (String token : tokens) {
             OptionalInt partIndex = IntStream.range(0, numParts)
-                            .filter(i -> allParts.get(i).name().toLowerCase().equals(token.toLowerCase()))
+                            .filter(i -> allParts.get(i).name().equalsIgnoreCase(token))
                             .findFirst();
             if (partIndex.isPresent()) {
                 partIndexes.add(partIndex.getAsInt());
             } else {
-                other.add(token);
+                other.add(token.toLowerCase());
             }
         }
         final float[] leftFactors;
@@ -68,7 +101,7 @@ public class MixUtils {
             log.debug("duet: {}, {}", leftIndex, rightIndex);
             leftFactors = targetPartFactors(numParts, leftIndex, POSITIVE_INFINITY);
             rightFactors = targetPartFactors(numParts, rightIndex, POSITIVE_INFINITY);
-        } else if (partIndexes.isEmpty() && other.contains("full")) {
+        } else if (partIndexes.isEmpty() && (other.contains("full") || other.contains("balanced"))) {
             log.debug("full mix");
             leftFactors = equalMixFactors(numParts);
             rightFactors = equalMixFactors(numParts);
@@ -166,14 +199,14 @@ public class MixUtils {
         short[] dest = new short[numShorts];
         sb.rewind();
         sb.get(dest);
-        log.info("{} @ {}/{}: {}", name, sb.position(), sb.limit(), StringUtils.join(dest, ' '));
+        log.debug("{} @ {}/{}: {}", name, sb.position(), sb.limit(), StringUtils.join(dest, ' '));
     }
 
     public static void logBuffer(FloatBuffer buf, String name) {
         float[] dest = new float[buf.remaining()];
         buf.get(dest);
         buf.rewind();
-        log.info("{} @ {}/{}: {}", name, buf.position(), buf.limit(), StringUtils.join(dest, ' '));
+        log.debug("{} @ {}/{}: {}", name, buf.position(), buf.limit(), StringUtils.join(dest, ' '));
     }
 
     private MixUtils() { /* prevent instantiation */ }

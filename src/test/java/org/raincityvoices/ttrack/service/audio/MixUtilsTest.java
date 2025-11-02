@@ -62,10 +62,10 @@ public class MixUtilsTest {
 
     @Test
     void testParseStereoMix() {
-        testParseOneStereoMix("full mix", BBS_4_PARTS, 
+        testParseOneStereoMix("Full Mix", BBS_4_PARTS, 
                                 0.25f, 0.25f, 0.25f, 0.25f,
                                 0.25f, 0.25f, 0.25f, 0.25f);
-        testParseOneStereoMix("full", BBS_4_PARTS, 
+        testParseOneStereoMix("balanced stereo", BBS_4_PARTS, 
                                 0.25f, 0.25f, 0.25f, 0.25f,
                                 0.25f, 0.25f, 0.25f, 0.25f);
         testParseOneStereoMix("Bari left", BBS_4_PARTS, 

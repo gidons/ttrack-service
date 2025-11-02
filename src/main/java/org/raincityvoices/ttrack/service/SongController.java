@@ -19,6 +19,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.api.CreateMixTrackRequest;
+import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.api.Song;
@@ -258,18 +259,6 @@ public class SongController {
 
         validateCreateMixRequest(request);
 
-        SongDTO song = songStorage.describeSong(songId.value());
-        if (song == null) {
-            // TODO add details to error
-            throw new ErrorResponseException(HttpStatus.NOT_FOUND);
-        }
-        if (songStorage.describeMix(songId.value(), request.name()) != null && !overwrite) {
-            throw new ErrorResponseException(HttpStatus.CONFLICT);
-        }
-        List<AudioTrackDTO> partTracks = request.parts().stream()
-                .map(p -> fetchTrackOrThrowNotFound(songId, p))
-                .toList();
-
         final AudioMix mix;
         try {
             mix = MixUtils.parseStereoMix(request.description(), request.parts());
@@ -277,20 +266,56 @@ public class SongController {
             log.info("Unable to parse audio mix description '{}' for parts {}", request.description(), request.parts());
             throw new ErrorResponseException(HttpStatus.BAD_REQUEST);
         }
-
-        MixTrack newMixTrack = MixTrack.builder()
-                .songId(songId)
-                .name(request.name())
-                .parts(request.parts())
-                .mix(mix)
+        
+        SongDTO song = songStorage.describeSong(songId.value());
+        if (song == null) {
+            // TODO add details to error
+            throw new ErrorResponseException(HttpStatus.NOT_FOUND);
+        }
+        
+        List<AudioTrackDTO> partTracks = request.parts().stream()        
+                .map(p -> fetchTrackOrThrowNotFound(songId, p))
+                .toList();
+        
+        AudioTrackDTO existing = songStorage.describeMix(songId.value(), request.name());
+        AudioTrackDTO newDto;
+        if (existing != null) {
+            if (!overwrite) {
+                throw new ErrorResponseException(HttpStatus.CONFLICT);
+            }
+            /* Existing track: create a new DTO with the new mix, but don't persist yet.
+             * The DB will be updated by the mixing task, but until then we want to maintain
+             * metadata matching the existing mix.
+             */
+            newDto = existing.toBuilder()
+                .parts(request.parts().stream().map(AudioPart::name).toList())
+                .audioMix(mix)
                 .build();
-
-        AudioTrackDTO newDto = AudioTrackDTO.fromMixTrack(newMixTrack);
-        log.info("Persisting mix track DTO: {}", newDto);
-        songStorage.writeTrack(newDto);
+        } else {
+            // New track: create and persist.
+            newDto = AudioTrackDTO.fromMixTrack(
+                MixTrack.builder()
+                    .songId(songId)
+                    .mixInfo(MixInfo.builder()
+                        .name(request.name())
+                        .parts(request.parts())
+                        .mix(mix)
+                        .build())
+                    .build());
+            log.info("Persisting new mix track DTO: {}", newDto);
+            songStorage.writeTrack(newDto);
+        }
 
         executorService.submit(new CreateMixTrackTask(newDto, partTracks, songStorage));
-        return newMixTrack;
+
+        return toMixTrack(newDto);
+    }
+
+    @GetMapping("/{id}/defaultMixes")
+    public List<MixInfo> listDefaultMixesForSong(@PathVariable("id") SongId songId) {
+        List<AudioTrackDTO> partTracks = songStorage.listPartsForSong(songId.value());
+        List<AudioPart> parts = partTracks.stream().map(this::toPartTrack).map(PartTrack::part).toList();
+        return MixUtils.getParseableMixes(parts);
     }
 
     // TODO move to CreateMixTrackRequest?
@@ -361,12 +386,15 @@ public class SongController {
         assert dto.isMixTrack();
         return MixTrack.builder()
             .songId(new SongId(dto.getSongId()))
-            .name(dto.getId())
-            .durationSec(dto.getDurationSec())
-            .parts(dto.getParts().stream().map(AudioPart::new).toList())
-            .mix(dto.getAudioMix())
+            .mixInfo(MixInfo.builder()
+                .name(dto.getId())
+                .parts(dto.getParts().stream().map(AudioPart::new).toList())
+                .mix(dto.getAudioMix())
+                .build())
             .created(dto.getCreated())
             .updated(dto.getUpdated())
+            .hasMedia(dto.hasMedia())
+            .durationSec(dto.getDurationSec())
             .build();
     }
 
@@ -375,9 +403,10 @@ public class SongController {
         return PartTrack.builder()
             .songId(new SongId(dto.getSongId()))
             .part(new AudioPart(dto.getId()))
-            .durationSec(dto.getDurationSec())
             .created(dto.getCreated())
             .updated(dto.getUpdated())
+            .hasMedia(dto.hasMedia())
+            .durationSec(dto.getDurationSec())
             .build();
     }
 

@@ -18,18 +18,18 @@ import lombok.experimental.SuperBuilder;
 public abstract class AudioTrack {
     @JsonProperty("songId")
     SongId songId;
-    @JsonIgnore
+    @JsonProperty("trackId")
     public abstract String trackId();
     @JsonProperty("durationSec")
-    int durationSec;
+    Integer durationSec;
     @JsonProperty("created")
     Instant created;
     @JsonProperty("updated")
     Instant updated;
+    @JsonIgnore
+    boolean hasMedia;
     @JsonProperty("url")
     public abstract URI url();
     @JsonProperty("mediaUrl")
     public abstract URI mediaUrl();
-    @JsonIgnore
-    public boolean isProcessed() { return mediaUrl() != null; }
 }

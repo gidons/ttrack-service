@@ -42,7 +42,7 @@ public class CreateMixTrackTask extends AudioTrackTask {
         AudioInputStream[] inputStreams = new AudioInputStream[numParts()];
         for (int i = 0; i < numParts(); ++i) {
             AudioTrackDTO partTrack = partTracks.get(i);
-            log.info("Reading media for part {} from {}", partTrack.getParts(), partTrack.getBlobName());
+            log.info("Reading media for part {} from {}", partTrack.getId(), partTrack.getBlobName());
             MediaContent content = storage().downloadMedia(partTrack);
             inputStreams[i] = AudioSystem.getAudioInputStream(content.stream());
         }

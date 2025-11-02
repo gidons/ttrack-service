@@ -25,6 +25,17 @@ public class AudioFormats {
         return forOutputChannels(original, numOutputChannels);
     }
 
+    public static AudioFormat toPcm(AudioFormat original) {
+        return new AudioFormat(
+            AudioFormat.Encoding.PCM_SIGNED, 
+            original.getSampleRate(), 
+            16, 
+            original.getChannels(),
+            original.getChannels() * 2,
+            original.getSampleRate(),
+            false);
+    }
+
     public static AudioFormat forOutputChannels(AudioFormat original, int numOutputChannels) {
         int newFrameSize = numOutputChannels * original.getSampleSizeInBits() / 8;
         return new AudioFormat(original.getEncoding(), original.getSampleRate(), original.getSampleSizeInBits(),

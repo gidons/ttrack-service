@@ -7,6 +7,7 @@ import org.raincityvoices.ttrack.service.SongController;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.EqualsAndHashCode;
@@ -25,9 +26,14 @@ import lombok.extern.jackson.Jacksonized;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MixTrack extends AudioTrack {
 
-    private final String name;
-    private final List<AudioPart> parts;
-    private final AudioMix mix;
+    private final MixInfo mixInfo;
+
+    @JsonIgnore
+    public String name() { return mixInfo.name(); }
+    @JsonIgnore
+    public List<AudioPart> parts() { return mixInfo.parts(); }
+    @JsonIgnore
+    public AudioMix mix() { return mixInfo.mix(); }
 
     @Override
     public String trackId() { return name(); } 
@@ -36,5 +42,5 @@ public class MixTrack extends AudioTrack {
     public URI url() { return SongController.mixTrackUrl(songId(), name()); }
 
     @Override
-    public URI mediaUrl() { return SongController.mixMediaUrl(songId(), name()); }
+    public URI mediaUrl() { return hasMedia() ? SongController.mixMediaUrl(songId(), name()) : null; }
 }
