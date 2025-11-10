@@ -1,26 +1,24 @@
 package org.raincityvoices.ttrack.service;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioSystem;
 
-import org.apache.commons.io.IOUtils;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
-import org.raincityvoices.ttrack.service.util.TempFile;
 
 import com.google.common.base.Preconditions;
 
 /**
  * An aysnchronous task that updates the metadata for an uploaded audio track based on
  * the audio contents, including the duration (in the table) and content type (on the blob).
- * This allows us to download content directly to the blob without first saving it to a
+ * This allows us to upload content directly to the blob without first saving it to a
  * local file.
  */
 public class ProcessUploadedTrackTask extends AudioTrackTask {
 
-    protected ProcessUploadedTrackTask(AudioTrackDTO track, SongStorage storage) {
-        super(track, storage);
+    ProcessUploadedTrackTask(AudioTrackDTO track, SongStorage songStorage, MediaStorage mediaStorage) {
+        super(track, songStorage, mediaStorage);
         Preconditions.checkArgument(track.hasMedia());
     }
 
@@ -29,16 +27,11 @@ public class ProcessUploadedTrackTask extends AudioTrackTask {
 
     @Override
     protected AudioTrackDTO process() throws Exception {
-        MediaContent media = storage().downloadMedia(track());
-        FileMetadata metadata;
-        try (TempFile tf = new TempFile("track"); 
-             OutputStream tempStream = new BufferedOutputStream(new FileOutputStream(tf.file()))) {
-            // Download the audio to disk
-            IOUtils.copy(media.stream(), tempStream);
-        
-            metadata = getMetadata(tf.file(), media.metadata().fileName());
-            storage().updateTrackMetadata(track(), metadata);
-        }
-        return null;
+        MediaContent media = mediaStorage().getMedia(track().getMediaLocation());
+        AudioFileFormat format = AudioSystem.getAudioFileFormat(media.stream());
+        FileMetadata metadata = FileMetadata.fromAudioFileFormat(format);
+        track().updateFileMetadata(metadata);
+        songStorage().writeTrack(track());
+        return track();
     }
 }

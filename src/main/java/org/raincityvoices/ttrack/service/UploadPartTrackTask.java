@@ -1,6 +1,7 @@
 package org.raincityvoices.ttrack.service;
 
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.util.TempFile;
 
@@ -14,8 +15,8 @@ public class UploadPartTrackTask extends AudioTrackTask {
     private final TempFile audioTempFile;
     private final String originalFileName;
 
-    public UploadPartTrackTask(AudioTrackDTO track, TempFile audioTempFile, String originalFileName, SongStorage storage) {
-        super(track, storage);
+    UploadPartTrackTask(AudioTrackDTO track, TempFile audioTempFile, String originalFileName, SongStorage songStorage, MediaStorage mediaStorage) {
+        super(track, songStorage, mediaStorage);
         Preconditions.checkNotNull(audioTempFile);
         Preconditions.checkArgument(audioTempFile.file().isFile());
         this.audioTempFile = audioTempFile;
@@ -30,7 +31,7 @@ public class UploadPartTrackTask extends AudioTrackTask {
     protected AudioTrackDTO process() throws Exception {
         try(audioTempFile) {
             AudioTrackDTO uploaded = uploadFile(audioTempFile.file(), originalFileName);
-            log.info("Uploaded part audio to {}", uploaded.getBlobName());
+            log.info("Uploaded part audio to {}", uploaded.getMediaLocation());
             return uploaded;
         }
     }

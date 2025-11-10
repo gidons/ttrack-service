@@ -31,6 +31,7 @@
 		<spring-cloud-azure.version>6.0.0</spring-cloud-azure.version>
 		<netty-version>4.1.127.Final</netty-version>
 		<netty-tcnative.version>2.0.73.Final</netty-tcnative.version>
+		<logbook-version>3.12.0</logbook-version>
 	</properties>
 	<repositories>
 		<repository>
@@ -178,6 +179,22 @@
     		<artifactId>mp3spi</artifactId>
     		<version>1.9.5.4</version>
 		</dependency>
+		<!-- Request/Response logging -->
+		<dependency>
+			<groupId>org.zalando</groupId>
+			<artifactId>logbook-core</artifactId>
+			<version>${logbook-version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.zalando</groupId>
+			<artifactId>logbook-servlet</artifactId>
+			<version>${logbook-version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.zalando</groupId>
+			<artifactId>logbook-spring-boot-starter</artifactId>
+			<version>${logbook-version}</version>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
@@ -226,6 +243,32 @@
 							<version>1.18.38</version>
 						</path>
 					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>**/*IntegTest.java</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<includes>
+						<include>**/*IntegTest.java</include>
+					</includes>
 				</configuration>
 			</plugin>
 			<plugin>

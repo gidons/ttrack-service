@@ -57,8 +57,8 @@ build/
 .vscode/
 
 ### Generated data
-/*.wav
-/*.mp3
+/data
+/logs
 
 /terraform/.terraform/
 /terraform/terraform.tfstate*

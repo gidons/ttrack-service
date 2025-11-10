@@ -3,6 +3,7 @@ package org.raincityvoices.ttrack.service;
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFileFormat.Type;
 
+import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.springframework.http.ContentDisposition;
 import org.springframework.util.MimeTypeUtils;
@@ -10,8 +11,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.BlobProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Builder;
+import lombok.Builder.Default;
+import lombok.Getter;
 import lombok.Value;
 import lombok.With;
 import lombok.experimental.Accessors;
@@ -19,11 +23,15 @@ import lombok.experimental.Accessors;
 @Value
 @Builder
 @Accessors(fluent = true)
+@Getter(onMethod = @__(@JsonProperty))
 public class FileMetadata {
     @With String fileName;
     @With String contentType;
     @With long lengthBytes;
     @With float durationSec;
+    @Default @With String etag = "";
+
+    public static final FileMetadata UNKNOWN = FileMetadata.builder().build();
 
     public static FileMetadata fromMultipartFile(MultipartFile mpFile) {
         return FileMetadata.builder()
@@ -38,6 +46,7 @@ public class FileMetadata {
                 .fileName(inferFileName(props))
                 .contentType(props.getContentType())
                 .lengthBytes(props.getBlobSize())
+                .etag(props.getETag())
                 .build();
     }
 
@@ -56,6 +65,7 @@ public class FileMetadata {
                 .contentType(other.contentType() != null ? other.contentType() : contentType())
                 .fileName(other.fileName() != null ? other.fileName() : fileName())
                 .durationSec(other.durationSec() > 0.0 ? other.durationSec() : durationSec())
+                .etag(!StringUtils.isEmpty(other.etag()) ? other.etag() : etag())
                 .build();
     }
 

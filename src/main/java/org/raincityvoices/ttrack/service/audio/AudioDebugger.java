@@ -101,6 +101,13 @@ public class AudioDebugger {
         return settings.getRangeSec().contains(elapsedSec());
     }
 
+    public void log(String message, Object... args) {
+        if (shouldLog()) {
+            String format = String.format("%s @ %.2f: %s", name, elapsedSec(), message);
+            log.info(format, args);
+        }
+    }
+
     private double frameRate() { return format.getFrameRate(); }
     private double elapsedSec() { return framesSeen / frameRate(); }
     private int channels() { return format.getChannels(); }

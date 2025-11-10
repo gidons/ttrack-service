@@ -10,7 +10,6 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
-import org.apache.commons.lang3.Range;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 
@@ -27,33 +26,36 @@ public class AudioMixingStream extends AudioInputStream {
         private final AudioInputStream[] inputStreams;
         private final AudioMix mix;
         private final int bufferFrames;
-        /** Range, in seconds, of elapsed time in which to log debug information. */
-        private final Range<Double> debugRange;
+        private final AudioDebugger[] inDebuggers;
+        private final AudioDebugger outDebugger;
         private final AudioFormat inputFormat;
         private final AudioFormat outputFormat;
         private final ByteBuffer inBytes[];
         private final FloatBuffer inBuffers[];
         private final FloatBuffer outBuffer;
 		private final TarsosDSPAudioFloatConverter converter;
-        private int processedFrames = 0;
 
         public MixingStream(AudioInputStream[] inputStreams, AudioMix mix, int bufferFrames) {
-            this(inputStreams, mix, bufferFrames, Range.of(0.0, 0.0));
+            this(inputStreams, mix, bufferFrames, AudioDebugger.Settings.NONE);
         }
 
-        MixingStream(AudioInputStream[] inputStreams, AudioMix mix, int bufferFrames, Range<Double> debugRange) {
+        MixingStream(AudioInputStream[] inputStreams, AudioMix mix, int bufferFrames, AudioDebugger.Settings debugSettings) {
             Preconditions.checkArgument(inputStreams.length == mix.numInputs());
             this.inputStreams = inputStreams;
             this.mix = mix;
             this.bufferFrames = bufferFrames;
-            this.debugRange = debugRange;
+            this.inDebuggers = new AudioDebugger[numInputs()];
+            for (int i = 0; i < numInputs(); ++i) {
+                this.inDebuggers[i] = new AudioDebugger("MixInput-" + i, inputStreams[i].getFormat(), debugSettings);
+            }
             // TODO validate matching
             this.inputFormat = inputStreams[0].getFormat();
             Preconditions.checkArgument(inputFormat.getSampleSizeInBits() == 16, 
-                                        "Input sample size is " + inputFormat.getSampleSizeInBits() + "; only 16 supported.");
+            "Input sample size is " + inputFormat.getSampleSizeInBits() + "; only 16 supported.");
             Preconditions.checkArgument(inputFormat.getChannels() == 1,
-                                        "At least one stream has more than one channel.");
+            "At least one stream has more than one channel.");
             this.outputFormat = AudioFormats.forOutputChannels(inputFormat, mix.numOutputs());
+            this.outDebugger = new AudioDebugger("MixOutput", outputFormat, debugSettings);
             this.inBytes = new ByteBuffer[numInputs()];
             this.inBuffers = new FloatBuffer[numInputs()];
             for (int i = 0; i < numInputs(); ++i) {
@@ -81,7 +83,6 @@ public class AudioMixingStream extends AudioInputStream {
             int numFrames = Math.min(len / outputFormat.getFrameSize(), bufferFrames);
             int bytesToRead = numFrames * inputFormat.getFrameSize();
             int minReadFrames = numFrames;
-            boolean debug = debugRange.contains(elapsedSec());
             for (int i = 0; i < numInputs(); ++i) {
                 ByteBuffer bb = inBytes[i];
                 FloatBuffer fb = inBuffers[i];
@@ -92,14 +93,13 @@ public class AudioMixingStream extends AudioInputStream {
                     return -1;
                 }
                 bb.limit(readBytes).rewind();
-                if (debug) { MixUtils.logBuffer(bb, "inBytes[" + i + "]"); }
+                inDebuggers[i].logBuffer(bb);
                 if (readFrames < minReadFrames) {
                     log.warn("Only read {} frames for stream {}", readFrames, i);
                     minReadFrames = readFrames;
                 }
                 converter.toFloatArray(bb.array(), fb.array(), readFrames);
                 fb.limit(readFrames).rewind();
-                if (debug) { MixUtils.logBuffer(fb, "inBuffer[" + i + "]"); }
             }
             int outSamples = minReadFrames * outputFormat.getChannels();
             outBuffer.limit(outSamples).rewind();
@@ -108,11 +108,9 @@ public class AudioMixingStream extends AudioInputStream {
                 log.warn("outBuffer.position = {}; expected {}", outBuffer.position(), outSamples);
             }
             converter.toByteArray(outBuffer.array(), outSamples, b);
-            // IF NEEDED FOR DEBUGGING
             ByteBuffer outBytes = ByteBuffer.wrap(b).limit(outSamples * 2);
             outBytes.order(inputFormat.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
-            if(debug) { MixUtils.logBuffer(outBytes, "outBytes"); }
-            processedFrames += minReadFrames;
+            outDebugger.logBuffer(outBytes);
             return minReadFrames * outputFormat.getFrameSize();
         }
 
@@ -122,10 +120,6 @@ public class AudioMixingStream extends AudioInputStream {
 
         private AudioFormat format(int i) {
             return inputStreams[i].getFormat();
-        }
-
-        private double elapsedSec() {
-            return processedFrames / inputFormat.getFrameRate();
         }
     }
 
@@ -138,8 +132,8 @@ public class AudioMixingStream extends AudioInputStream {
         return new AudioMixingStream(mixingStream);
     }
 
-    public static AudioMixingStream create(AudioInputStream inputStreams[], AudioMix mix, int bufferFrames, Range<Double> debugRange) {
-        MixingStream mixingStream = new MixingStream(inputStreams, mix, bufferFrames, debugRange);
+    public static AudioMixingStream create(AudioInputStream inputStreams[], AudioMix mix, int bufferFrames, AudioDebugger.Settings debugSettings) {
+        MixingStream mixingStream = new MixingStream(inputStreams, mix, bufferFrames, debugSettings);
         return new AudioMixingStream(mixingStream);
     }
 

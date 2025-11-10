@@ -3,15 +3,16 @@ package org.raincityvoices.ttrack.service.audio.model;
 import java.nio.FloatBuffer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 
+import lombok.Getter;
 import lombok.Value;
 import lombok.experimental.Accessors;
-import lombok.extern.jackson.Jacksonized;
 
 @Value
 @Accessors(fluent = true)
-@Jacksonized
+@Getter(onMethod=@__(@JsonProperty()))
 public class AllPartsMix implements AudioMix {
 
     ImmutableList<AudioPart> parts;

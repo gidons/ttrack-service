@@ -17,6 +17,8 @@ import org.raincityvoices.ttrack.service.audio.AudioDebugger;
 import org.raincityvoices.ttrack.service.audio.AudioMixingStream;
 import org.raincityvoices.ttrack.service.audio.ChannelExtractingStream;
 import org.raincityvoices.ttrack.service.audio.MixUtils;
+import org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter;
+import org.raincityvoices.ttrack.service.audio.TarsosUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
@@ -94,7 +96,7 @@ public class WavProcessor {
     }
 
     @SuppressWarnings("null")
-    private AudioDebugger.Settings getDebugSettings(Double[] debugRange) {
+    private static AudioDebugger.Settings getDebugSettings(Double[] debugRange) {
         final AudioDebugger.Settings debugSettings;
         switch(debugRange == null ? 0 : debugRange.length) {
             case 0: debugSettings = AudioDebugger.Settings.NONE; break;
@@ -104,6 +106,28 @@ public class WavProcessor {
         }
         log.debug("debugSettings: {}", debugSettings);
         return debugSettings;
+    }
+
+    @Command(name = "modify", description="Change pitch and/or speed of an audio file")
+    public static class ModifyAudio implements Callable<Integer> {
+        @Option(names = { "-i", "input" }, description = "The input WAV file for each part", required = true)
+        private File inFile;
+        @Option(names = { "-o", "output" }, description = "The file to write the extracted channel to")
+        private File outFile;
+        @Option(names = { "-p", "pitch" })
+        private int pitchShift; // in half-steps
+        @Option(names = { "-s", "speed" })
+        private double speedFactor = 1.0;
+
+        @Override
+        public Integer call() throws Exception {
+            AudioInputStream in = AudioSystem.getAudioInputStream(inFile);
+            try (TarsosStreamAdapter tarsosAdapter = new TarsosStreamAdapter(TarsosUtils.getPitchAndSpeedDispatcher(in, pitchShift, speedFactor))) {
+                AudioInputStream processingStream = tarsosAdapter.getAudioInputStream();
+                AudioSystem.write(processingStream, Type.WAVE, outFile);
+            }
+            return 0;
+        }
     }
 
     @Command(name = "mix", description="Mix multiple input files to a single file")
@@ -144,7 +168,8 @@ public class WavProcessor {
     @Command(subcommands = {
         FileInfo.class,
         ExtractChannel.class,
-        MixFiles.class
+        MixFiles.class,
+        ModifyAudio.class
     })
     public static class Main {
 

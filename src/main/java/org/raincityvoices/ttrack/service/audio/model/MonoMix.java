@@ -5,6 +5,7 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -22,6 +23,7 @@ public class MonoMix implements AudioMix {
      * mixFactors[i] is a number between 0.0 and 1.0 that is used to multiply
      * the audio from the ith input part when mixing.
      */
+    @JsonProperty("mixFactors")
     float[] mixFactors;
     @JsonIgnore
     float[] sample;

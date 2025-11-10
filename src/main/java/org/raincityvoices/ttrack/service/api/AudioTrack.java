@@ -6,6 +6,7 @@ import java.time.Instant;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.Getter;
 import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.experimental.NonFinal;
@@ -13,23 +14,20 @@ import lombok.experimental.SuperBuilder;
 
 @Value
 @NonFinal
-@SuperBuilder
+@SuperBuilder(toBuilder = true)
 @Accessors(fluent = true)
+@Getter(onMethod = @__(@JsonProperty))
 public abstract class AudioTrack {
-    @JsonProperty("songId")
     SongId songId;
-    @JsonProperty("trackId")
+    @JsonProperty
     public abstract String trackId();
-    @JsonProperty("durationSec")
     Integer durationSec;
-    @JsonProperty("created")
     Instant created;
-    @JsonProperty("updated")
     Instant updated;
     @JsonIgnore
     boolean hasMedia;
-    @JsonProperty("url")
+    @JsonProperty
     public abstract URI url();
-    @JsonProperty("mediaUrl")
+    @JsonProperty
     public abstract URI mediaUrl();
 }

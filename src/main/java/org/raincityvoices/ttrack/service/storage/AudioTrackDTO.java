@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.raincityvoices.ttrack.service.FileMetadata;
 import org.raincityvoices.ttrack.service.api.AudioTrack;
 import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
@@ -52,14 +53,16 @@ public class AudioTrackDTO extends BaseDTO {
     List<String> parts;
     @Getter(onMethod = @__(@Property(type="json")))
     AudioMix audioMix;
+    Integer pitchShift;
+    Double speedFactor;
     Integer durationSec;
     /** When the track was created (metadata only) */
     Instant created;
     /** When the track was processed and the audio blob created, or null if not processed yet. */
     @Getter(onMethod = @__(@Timestamp))
     Instant updated;
-    /** The name of the blob in the "song-media" blob container. */
-    String blobName;
+    /** The location of the media (used by MediaStorage). */
+    String mediaLocation;
 
     @Transient
     public boolean isPartTrack() { return parts == null && audioMix == null; }
@@ -68,14 +71,18 @@ public class AudioTrackDTO extends BaseDTO {
     @Transient
     public boolean isValid() { return songId != null && id != null && isPartTrack() || isMixTrack(); }
     @Transient
-    public boolean hasMedia() { return getBlobName() != null; }
+    public boolean hasMedia() { return getMediaLocation() != null; }
+    /** Alias for blobName. */
+
+    public void updateFileMetadata(FileMetadata metadata) {
+        setDurationSec((int)metadata.durationSec());
+    }
 
     public static AudioTrackDTOBuilder fromAudioTrack(AudioTrack track) {
         return AudioTrackDTO.builder()
             .songId(track.songId().value())
             .id(track.trackId())
-            .blobName(null) // API track object doesn't store blob name
-            .audioMix(null)
+            .mediaLocation(null) // API track object doesn't store location
             .created(track.created())
             .updated(track.updated());
     }
@@ -83,6 +90,8 @@ public class AudioTrackDTO extends BaseDTO {
     public static AudioTrackDTO fromPartTrack(PartTrack track) {
         return fromAudioTrack(track)
             .audioMix(null)
+            .pitchShift(null)
+            .speedFactor(null)
             .parts(null)
             .build();
     }
@@ -90,6 +99,8 @@ public class AudioTrackDTO extends BaseDTO {
     public static AudioTrackDTO fromMixTrack(MixTrack track) {
         return fromAudioTrack(track)
             .audioMix(track.mix())
+            .pitchShift(track.mixInfo().pitchShift())
+            .speedFactor(track.mixInfo().speedFactor())
             .parts(track.parts().stream().map(AudioPart::name).toList())
             .build();
     }

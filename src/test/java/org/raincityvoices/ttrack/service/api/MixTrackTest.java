@@ -27,13 +27,16 @@ public class MixTrackTest {
                 .build())
             .created(Instant.now().minusSeconds(5))
             .updated(Instant.now())
+            .hasMedia(true)
             .build();
 
         String json = mapper.writeValueAsString(original);
-        // assertEquals("", json);
+        System.out.println(json);
 
         MixTrack recon = mapper.readValue(json, MixTrack.class);
+        // hasMedia isn't present in the JSON, and isn't set automatically
+        MixTrack expected = original.toBuilder().hasMedia(false).build();
         assertEquals("some mix", recon.name());
-        assertEquals(original, recon);
+        assertEquals(expected, recon);
     }
 }

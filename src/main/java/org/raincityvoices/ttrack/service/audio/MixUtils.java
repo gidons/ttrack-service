@@ -53,6 +53,9 @@ public class MixUtils {
         return names.build().stream().map(n -> MixUtils.parseStereoMixInfo(n, parts)).toList();
     }
 
+    // public static List<MixInfo> getMixPackage(String description, int pitchShift, double speedFactor) {
+    // }
+
     public static MixInfo parseStereoMixInfo(String description, List<AudioPart> parts) {
         return MixInfo.builder()
             .name(description)
@@ -105,7 +108,7 @@ public class MixUtils {
             log.debug("full mix");
             leftFactors = equalMixFactors(numParts);
             rightFactors = equalMixFactors(numParts);
-        } else if (partIndexes.size() == 1 && other.size() == 1) {
+        } else if (partIndexes.size() == 1 && other.size() >= 1) {
             int partIndex = partIndexes.get(0);
             String type = other.get(0);
             log.debug("target: {} {} {}", allParts.get(partIndex), partIndex, type);

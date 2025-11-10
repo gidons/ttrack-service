@@ -11,11 +11,19 @@ spring:
   mvc:
     observation:
       enabled: true
+logging:
+  file:
+    name: ttrack-service.log
+  level:
+    org:
+      zalando:
+        logbook:
+          Logbook: TRACE
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics
+        include: health,info,prometheus,metrics,logfile,loggers
   endpoint:
     health:
       show-details: always
@@ -33,3 +41,7 @@ azure:
     endpoint: https://shavitttrackwestus.table.core.windows.net/
   blobs:
     endpoint: https://shavitttrackwestus.blob.core.windows.net/
+
+service:
+  cache:
+    directory: /tmp/ttrack-service/cache

@@ -66,6 +66,7 @@ public class MonoMixTest {
         MonoMix original = new MonoMix(0.4f, 0.3f, 0.2f, 0.1f);
         ObjectMapper mapper = JsonUtils.newMapper();
         String json = mapper.writeValueAsString(original);
+        System.out.println("json: " + json);
         AudioMix recon = mapper.readValue(json, AudioMix.class);
         assertEquals(original, recon);
     }

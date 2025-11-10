@@ -20,10 +20,10 @@ import lombok.extern.jackson.Jacksonized;
 @Value
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
-@SuperBuilder
+@SuperBuilder(toBuilder = true)
 @Accessors(fluent = true)
-@Jacksonized // necessary because accessors aren't bean-like
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Jacksonized
 public class MixTrack extends AudioTrack {
 
     private final MixInfo mixInfo;
@@ -34,7 +34,6 @@ public class MixTrack extends AudioTrack {
     public List<AudioPart> parts() { return mixInfo.parts(); }
     @JsonIgnore
     public AudioMix mix() { return mixInfo.mix(); }
-
     @Override
     public String trackId() { return name(); } 
 

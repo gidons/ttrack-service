@@ -31,17 +31,21 @@ public class PartTrackTest {
         PartTrack original = PartTrack.builder()
             .songId(new SongId("the song"))
             .part(TestData.BARI)
+            .hasMedia(true)
             .created(Instant.now().minusSeconds(5))
             .updated(Instant.now())
             .build();
 
         String json = mapper.writeValueAsString(original);
-        // assertEquals("", json);
+        System.out.println(json);
 
         PartTrack recon = mapper.readValue(json, PartTrack.class);
-        assertEquals(original, recon);
+        // hasMedia isn't present in the JSON, and isn't set automatically
+        PartTrack expected = original.toBuilder().hasMedia(false).build();
+        assertEquals(expected, recon);
 
         JsonNode tree = mapper.readTree(json);
         assertEquals("/songs/the%20song/parts/Bari", tree.get("url").asText());
+        assertEquals("/songs/the%20song/parts/Bari/media", tree.get("mediaUrl").asText());
     }
 }

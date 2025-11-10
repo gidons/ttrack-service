@@ -8,21 +8,22 @@ import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Builder;
+import lombok.Getter;
 import lombok.Value;
 import lombok.experimental.Accessors;
-import lombok.extern.jackson.Jacksonized;
 
 @Value
 @Builder
 @Accessors(fluent = true)
-@Jacksonized // necessary because accessors aren't bean-like
+@Getter(onMethod=@__(@JsonProperty()))
 public class MixInfo {
 
-    @JsonProperty("name")
     private final String name;
-    @JsonProperty("parts")
     private final List<AudioPart> parts;
-    @JsonProperty("mix")
     private final AudioMix mix;
+    /** Pitch shift in half-steps, e.g. +7 is up a fifth, -3 is down a minor 3rd. */
+    private final int pitchShift;
+    /** Speed factor, e.g. 2 is twice as fast the original, 0.5 is twice as slow. */
+    private final double speedFactor;
 
 }
