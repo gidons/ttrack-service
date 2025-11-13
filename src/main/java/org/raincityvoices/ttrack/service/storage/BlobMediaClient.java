@@ -1,15 +1,24 @@
 package org.raincityvoices.ttrack.service.storage;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 
 import org.raincityvoices.ttrack.service.FileMetadata;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
+import com.azure.storage.blob.BlobAsyncClient;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.models.BlobDownloadResponse;
+import com.azure.storage.blob.models.BlobRequestConditions;
+import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.options.BlobDownloadToFileOptions;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,9 +47,27 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
     private final BlobContainerClient containerClient;
 
     @Override
-    public void downloadMedia(String location, File destination) {
-        log.info("Downloading blob {} to local file {}", location, destination.getAbsolutePath());
-        client(location).downloadToFile(destination.getAbsolutePath(), true);   
+    public FileMetadata downloadMedia(String location, FileMetadata currentMetadata, File destination) {
+        String currentETag = currentMetadata.etag();
+        log.info("Downloading blob {} to local file {} (current ETag: {})", location, destination.getAbsolutePath(), currentETag);
+        try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(destination))) {
+            BlobDownloadResponse response = client(location).downloadStreamWithResponse(stream, null, null, 
+                new BlobRequestConditions().setIfNoneMatch(currentETag), false, null, null);
+            return FileMetadata.fromBlobDownloadHeaders(response.getDeserializedHeaders());
+        } catch(BlobStorageException e) {
+            switch (e.getStatusCode()) {
+                case 304: 
+                    log.info("ETag hasn't changed.");
+                    return currentMetadata;
+                case 404:
+                    log.info("Blob does not exist.");
+                    return null;
+                default:
+                    throw new RuntimeException("Failed to download media from blob " + location + " to local file " + destination);                    
+            }
+        } catch(Exception e) {
+            throw new RuntimeException("Failed to download media from blob " + location + " to local file " + destination);
+        }
     }
     
     @Override
@@ -60,8 +87,16 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
 
     @Override
     public FileMetadata fetchMetadata(String location) {
-        log.info("Fetching   metadata for {}", location);
-        return FileMetadata.fromBlobProperties(client(location).getProperties());
+        log.info("Fetching metadata for {}", location);
+        try {
+            return FileMetadata.fromBlobProperties(client(location).getProperties());
+        } catch(BlobStorageException e) {
+            if (e.getStatusCode() == 404) {
+                log.info("No blob named {} found", location);
+                return null;
+            }
+            throw e;
+        }
     }
 
     @Override
@@ -71,7 +106,7 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
         client(location).setHttpHeaders(metadata.toBlobHttpHeaders());
     }
 
-    public void delete(String location) {
+    public void deleteMedia(String location) {
         log.info("Deleting {}", location);
         client(location).deleteIfExists();
     }

@@ -7,6 +7,7 @@ import java.util.List;
 import org.apache.commons.collections4.CollectionUtils;
 import org.raincityvoices.ttrack.service.FileMetadata;
 import org.raincityvoices.ttrack.service.api.AudioTrack;
+import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
@@ -72,7 +73,12 @@ public class AudioTrackDTO extends BaseDTO {
     public boolean isValid() { return songId != null && id != null && isPartTrack() || isMixTrack(); }
     @Transient
     public boolean hasMedia() { return getMediaLocation() != null; }
-    /** Alias for blobName. */
+
+    public void setMixInfo(MixInfo mixInfo) {
+        this.audioMix = mixInfo.mix();
+        this.pitchShift = mixInfo.pitchShift();
+        this.speedFactor = mixInfo.speedFactor();
+    }
 
     public void updateFileMetadata(FileMetadata metadata) {
         setDurationSec((int)metadata.durationSec());

@@ -24,7 +24,7 @@ public class UploadPartTrackTask extends AudioTrackTask {
     }
 
     @Override
-    protected void validate() throws Exception {
+    protected void initialize() throws Exception {
     }
 
     @Override

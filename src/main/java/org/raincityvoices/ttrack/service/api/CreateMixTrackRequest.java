@@ -15,7 +15,7 @@ import lombok.extern.jackson.Jacksonized;
 @Accessors(fluent = true)
 @Builder
 @Jacksonized
-public class CreateMixTrackRequest {
+public class CreateMixTrackRequest extends CreateMixRequestBase {
     String name;
     List<AudioPart> parts;
     String description;

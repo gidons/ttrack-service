@@ -9,6 +9,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.azure.storage.blob.models.BlobDownloadHeaders;
 import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.BlobProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,11 +44,20 @@ public class FileMetadata {
 
     public static FileMetadata fromBlobProperties(BlobProperties props) {
         return FileMetadata.builder()
-                .fileName(inferFileName(props))
+                .fileName(inferFileName(props.getContentDisposition()))
                 .contentType(props.getContentType())
                 .lengthBytes(props.getBlobSize())
                 .etag(props.getETag())
                 .build();
+    }
+
+    public static FileMetadata fromBlobDownloadHeaders(BlobDownloadHeaders headers) {
+        return FileMetadata.builder() 
+                        .contentType(headers.getContentType())
+                        .fileName(inferFileName(headers.getContentDisposition()))
+                        .lengthBytes(headers.getContentLength())
+                        .etag(headers.getETag())
+                        .build();
     }
 
     public static FileMetadata fromAudioFileFormat(AudioFileFormat format) {
@@ -69,9 +79,9 @@ public class FileMetadata {
                 .build();
     }
 
-    private static String inferFileName(BlobProperties props) {
-        if (props.getContentDisposition() != null) {
-            ContentDisposition header = ContentDisposition.parse(props.getContentDisposition());
+    private static String inferFileName(String contentDisposition) {
+        if (contentDisposition != null) {
+            ContentDisposition header = ContentDisposition.parse(contentDisposition);
             return header.getFilename(); // may be null!
         }
         return null;

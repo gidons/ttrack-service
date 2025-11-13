@@ -9,6 +9,7 @@ public interface MediaStorage {
     MediaContent getMedia(String mediaLocation);
     void putMedia(String mediaLocation, MediaContent content);
     FileMetadata getMediaMetadata(String mediaLocation);
+    void deleteMedia(String mediaLocation);
     default String mediaLocationFor(SongId songId, String trackId) {
         return String.format("%s/%s", songId.value(), trackId);
     }

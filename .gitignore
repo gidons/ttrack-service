@@ -57,6 +57,7 @@ build/
 .vscode/
 
 ### Generated data
+*.wav
 /data
 /logs
 

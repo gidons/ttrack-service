@@ -134,4 +134,12 @@ public class AzureTablesSongStorage implements SongStorage {
         }
         return trackDto;
     }
+
+    @Override
+    public void deleteTrack(String songId, String trackId) {
+        Preconditions.checkNotNull(songId);
+        Preconditions.checkNotNull(trackId);
+
+        songsClient.deleteEntity(songId, trackId);
+    }
 }

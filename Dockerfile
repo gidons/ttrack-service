@@ -3,6 +3,9 @@
 FROM eclipse-temurin:21-jdk as build
 WORKDIR /workspace
 
+# Install dependencies
+RUN apt-get -y update && apt-get install -y ffmpeg
+
 # Copy project files and the Maven wrapper, then run the wrapper to build
 COPY mvnw ./
 COPY .mvn/ .mvn/

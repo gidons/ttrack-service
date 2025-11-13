@@ -5,10 +5,12 @@ import java.util.List;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
+import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.audio.AudioDebugger;
 import org.raincityvoices.ttrack.service.audio.AudioMixingStream;
 import org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter;
 import org.raincityvoices.ttrack.service.audio.TarsosUtils;
+import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
@@ -19,19 +21,27 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class CreateMixTrackTask extends AudioTrackTask {
-    private final List<AudioTrackDTO> partTracks;
+    private final MixInfo mixInfo;
+    private List<AudioTrackDTO> partTracks;
 
-    CreateMixTrackTask(AudioTrackDTO mixTrack, List<AudioTrackDTO> partTracks, SongStorage storage, MediaStorage mediaStorage, AudioDebugger.Settings debugSettings) {
+    CreateMixTrackTask(AudioTrackDTO mixTrack, SongStorage storage, MediaStorage mediaStorage, AudioDebugger.Settings debugSettings) {
         super(mixTrack, storage, mediaStorage, debugSettings);
-        this.partTracks = List.copyOf(partTracks);
+        this.mixInfo = SongController.toMixTrack(mixTrack).mixInfo();
     }
 
     private final AudioTrackDTO mixTrack() { return track(); }
 
     @Override
-    protected void validate() {
+    public String toString() {
+        return String.format("[CreateMixTrackTask: target=%s/%s mixInfo=%s]", songId(), trackId(), mixInfo);
+    }
+
+    @Override
+    protected void initialize() {
+        // Override the previous mix info (if any) with the requested mix.
+        mixTrack().setMixInfo(mixInfo);
+        partTracks = mixInfo.parts().stream().map(AudioPart::value).map(this::describeTrackOrThrow).toList();
         partTracks.forEach(pt -> {
-            Preconditions.checkArgument(pt.isPartTrack(), "Track %s/%s is not a part", pt.getSongId(), pt.getId());
             Preconditions.checkArgument(pt.hasMedia(), "Track %s/%s has no audio", pt.getSongId(), pt.getId());
         });
     }
@@ -46,7 +56,7 @@ public class CreateMixTrackTask extends AudioTrackTask {
         for (int i = 0; i < numParts(); ++i) {
             AudioTrackDTO partTrack = partTracks.get(i);
             log.info("Reading media for part {} from {}", partTrack.getId(), partTrack.getMediaLocation());
-            MediaContent content = mediaStorage().getMedia(track().getMediaLocation());
+            MediaContent content = mediaStorage().getMedia(partTrack.getMediaLocation());
             inputStreams[i] = AudioSystem.getAudioInputStream(content.stream());
             if (needAudioMod) {
                 log.info("Applying pitch shift {}, speed factor {}", mixTrack().getPitchShift(), mixTrack().getSpeedFactor());

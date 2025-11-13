@@ -11,8 +11,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
 import org.apache.commons.io.IOUtils;
@@ -50,14 +55,48 @@ public class DiskCachingMediaStorageIntegTest {
     @AfterEach
     public void cleanup() {
         mediaStorage.deleteFromCache(LOCATION);
-        blobClient.delete(LOCATION);
+        blobClient.deleteMedia(LOCATION);
+    }
+
+    private class DownloadTask implements Callable<FileMetadata> {
+        private int num;
+        DownloadTask(int num) { this.num = num; }
+        @Override
+        public FileMetadata call() throws Exception {
+            log.info("Starting download {}...", num);
+            try {
+                MediaContent media = mediaStorage.getMedia(LOCATION);
+                log.info("Download {} complete.", num);
+                return media.metadata();
+            } catch(Exception e) {
+                log.error("Exception in download {}", num, e);
+                throw e;
+            }
+        }
     }
 
     @Test
+    public void testMultithreadedDownload() throws Exception {
+        AudioInputStream mediaStream = AudioSystem.getAudioInputStream(TEST_WAV_FILE);
+        FileMetadata metadata = FileMetadata.builder().fileName(FILENAME).build();
+        mediaStorage.putMedia(LOCATION, new MediaContent(mediaStream, metadata));
+        mediaStream.close();
+        
+        mediaStorage.deleteFromCache(LOCATION);
+        
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        for (int i = 1; i <= 3; ++i) {
+            executor.submit(new DownloadTask(i));
+        }
+        executor.shutdown();
+        executor.awaitTermination(10, TimeUnit.SECONDS);
+    }
+    
+    @Test
     public void testEndToEnd() throws Exception {
-        InputStream mediaStream = new FileInputStream(TEST_WAV_FILE);
+        AudioInputStream mediaStream = AudioSystem.getAudioInputStream(TEST_WAV_FILE);
         byte[] originalBytes = IOUtils.toByteArray(mediaStream);
-        mediaStream = new FileInputStream(TEST_WAV_FILE);
+        mediaStream = AudioSystem.getAudioInputStream(TEST_WAV_FILE);
         FileMetadata metadata = FileMetadata.builder()
             .fileName(FILENAME)
             .build();

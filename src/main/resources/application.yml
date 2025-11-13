@@ -13,7 +13,7 @@ spring:
       enabled: true
 logging:
   file:
-    name: ttrack-service.log
+    name: logs/ttrack-service.log
   level:
     org:
       zalando:

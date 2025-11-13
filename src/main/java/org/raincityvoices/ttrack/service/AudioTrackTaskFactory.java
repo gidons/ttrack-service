@@ -28,7 +28,7 @@ public class AudioTrackTaskFactory {
         return new UploadPartTrackTask(track, audioTempFile, originalFileName, songStorage, mediaStorage);
     }
 
-    public CreateMixTrackTask newCreateMixTrackTask(AudioTrackDTO mixTrack, List<AudioTrackDTO> partTracks) {
-        return new CreateMixTrackTask(mixTrack, partTracks, songStorage, mediaStorage, debugSettings);
+    public CreateMixTrackTask newCreateMixTrackTask(AudioTrackDTO mixTrack) {
+        return new CreateMixTrackTask(mixTrack, songStorage, mediaStorage, debugSettings);
     }
 }

@@ -10,17 +10,23 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.sound.sampled.AudioFileFormat.Type;
 
 import org.raincityvoices.ttrack.service.FileMetadata;
 import org.raincityvoices.ttrack.service.MediaContent;
-import org.raincityvoices.ttrack.service.util.JsonUtils;
+import org.raincityvoices.ttrack.service.util.AutoLock;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.microsoft.applicationinsights.core.dependencies.google.common.base.Preconditions;
 
 import lombok.extern.slf4j.Slf4j;
@@ -30,30 +36,37 @@ public class DiskCachingMediaStorage implements MediaStorage {
 
     public interface RemoteStorage {
         boolean exists(String location);
-        void downloadMedia(String location, File destination);
+        /** 
+         * Download the media from the given location to the destination, if it has a new etag.
+         * @return the metadata from the remote storage, or null if the media doesn't exist.
+         * TODO replace null return value with specific exception?
+         */
+        FileMetadata downloadMedia(String location, FileMetadata currentMetadata, File destination);
         FileMetadata fetchMetadata(String location);
         void uploadMedia(File source, String location);
         void updateMetadata(FileMetadata metadata, String location);
+        void deleteMedia(String mediaLocation);
     }
 
     /** Testable wrapper around static filesystem calls */
     @VisibleForTesting
     interface FileSystem {
-        InputStream getInputStream(File file) throws IOException;
-        OutputStream getOutputStream(File file) throws IOException;
+        AudioInputStream getInputStream(File file) throws IOException, UnsupportedAudioFileException;
+        void writeAudio(AudioInputStream audio, File file) throws IOException;
         AudioFileFormat getAudioFileFormat(File file) throws IOException, UnsupportedAudioFileException;
         boolean exists(File file);
         boolean delete(File file);
+        boolean rename(File oldName, File newName);
     }
 
     private static FileSystem DEFAULT_FILE_SYSTEM = new FileSystem() {
         @Override
-        public InputStream getInputStream(File file) throws IOException {
-            return new BufferedInputStream(new FileInputStream(file));
+        public AudioInputStream getInputStream(File file) throws IOException, UnsupportedAudioFileException {
+            return AudioSystem.getAudioInputStream(file);
         }
         @Override
-        public OutputStream getOutputStream(File file) throws IOException {
-            return new BufferedOutputStream(new FileOutputStream(file));
+        public void writeAudio(AudioInputStream audio, File file) throws IOException {
+            AudioSystem.write(audio, Type.WAVE, file);
         }
         @Override
         public AudioFileFormat getAudioFileFormat(File file) throws IOException, UnsupportedAudioFileException {
@@ -67,188 +80,202 @@ public class DiskCachingMediaStorage implements MediaStorage {
         public boolean delete(File file) {
             return file.delete();
         }
+        @Override
+        public boolean rename(File oldName, File newName) {
+            return oldName.renameTo(newName);
+        }
     };
-
-    static final String METADATA_SUFFIX = ".meta";
-    private static final ObjectMapper MAPPER = JsonUtils.newMapper();
+    
+    static final String UPLOAD_FILE_SUFFIX = "upload";
+    static final String DOWNLOAD_FILE_SUFFIX = "download";
+    
     private final RemoteStorage remote;
     private final File cacheDir;
     private final FileSystem fileSystem;
-
+    
+    private final LoadingCache<String, CachingMediaClient> locationClients = CacheBuilder.newBuilder()
+        .maximumSize(10)
+        .concurrencyLevel(10)
+        .build(CacheLoader.from(l -> new CachingMediaClient(l)));
+    
     public DiskCachingMediaStorage(RemoteStorage remoteStorage, File cacheDir) {
         this(remoteStorage, cacheDir, DEFAULT_FILE_SYSTEM);
     }
-
+    
     public DiskCachingMediaStorage(RemoteStorage remoteStorage, File cacheDir, FileSystem fileSystem) {
         this.remote = remoteStorage;
         this.cacheDir = cacheDir;
         this.fileSystem = fileSystem;
     }
-
+    
     private class CachingMediaClient {
-        private String mediaLocation;
-        private final File localFile;
-        private final File metadataFile;
-        /** Metadata inferred from the local media file, e.g. audio format/length. */
-        private FileMetadata mediaMetadata = FileMetadata.UNKNOWN;
-        /** Combined remote and locally-inferred metadata. */
-        private FileMetadata metadata = FileMetadata.UNKNOWN;
+        private final String mediaLocation;
+        private final ReentrantLock lock = new ReentrantLock();
+        private File localFile;
+        private FileMetadata metadata;
 
         CachingMediaClient(String mediaLocation) {
             this.mediaLocation = mediaLocation;
-            this.localFile = mediaFile();
-            this.metadataFile = metadataFile();
-            if (fileSystem.exists(metadataFile)) {
-                metadata = readMetadata();
-            }
-            if (fileSystem.exists(localFile)) {
-                mediaMetadata = inferMediaMetadata();
-            }
-        }
-
-        private FileMetadata inferMediaMetadata() {
-            try {
-                return FileMetadata.fromAudioFileFormat(fileSystem.getAudioFileFormat(localFile));
-            } catch (IOException | UnsupportedAudioFileException e) {
-                log.error("Unable to infer metadata from media file {}", localFile);
-                return null;
+            this.metadata = FileMetadata.UNKNOWN;
+            // Check if we already have the most recent media in the cache, and if so update the in-memory representation
+            FileMetadata remoteMetadata = remote.fetchMetadata(mediaLocation);
+            if (remoteMetadata != null) {
+                File expectedFile = mediaFile(remoteMetadata.etag());
+                if (fileSystem.exists(expectedFile)) {
+                    updateLocalFileAndMetadata(expectedFile, remoteMetadata);
+                }
             }
         }
-
+        
         public MediaContent getMedia() {
             if (!remote.exists(mediaLocation)) {
-                throw new IllegalArgumentException("Media at " + mediaLocation + " does not exist");
+                throw new IllegalArgumentException("No media found at location " + mediaLocation);
             }
-            if (shouldDownload()) {
-                remote.downloadMedia(mediaLocation, localFile);
-                mediaMetadata = inferMediaMetadata();
-                downloadMetadata();
-            }
-            final InputStream stream;
+            downloadIfNecessary();
             try {
-                stream = fileSystem.getInputStream(localFile);
-            } catch (IOException e) {
-                throw new RuntimeException("Unexpectedly failed to find local cached file " + localFile.getAbsolutePath(), e);
+                AudioInputStream stream = fileSystem.getInputStream(localFile);
+                return new MediaContent(stream, metadata);
+            } catch (IOException | UnsupportedAudioFileException e) {
+                throw new RuntimeException("Failed to read media from local file " + localFile);
             }
-            return new MediaContent(stream, metadata);
         }
 
-        public FileMetadata getMediaMetadata() {
-            if (!remote.exists(mediaLocation)) {
-                throw new IllegalArgumentException("Media at " + mediaLocation + " does not exist");
-            }
-            return downloadMetadata();
-        }
-
-        public void putMedia(MediaContent content) {
-            try {
-                log.info("Writing media cache file {}...", localFile.getAbsolutePath());
-                try (OutputStream fos = fileSystem.getOutputStream(localFile)) {
-                    content.stream().transferTo(fos);
+        private void downloadIfNecessary() {
+            try(AutoLock al = new AutoLock(lock)) {
+                File downloadFile = mediaFile(DOWNLOAD_FILE_SUFFIX);
+                FileMetadata remoteMetadata = remote.downloadMedia(mediaLocation, metadata, downloadFile);
+                if (remoteMetadata == null) {
+                    // Media deleted
+                    log.info("Media for {} no longer available on remote storage.", mediaLocation);
+                    return;
                 }
-                mediaMetadata = inferMediaMetadata();
+                if (remoteMetadata.etag().equals(metadata.etag())) {
+                    log.info("Media for {} has not changed since last downloaded.", mediaLocation);
+                    return;
+                }
+                log.info("Downloaded media for {} with new ETag {}: creating new local file.", mediaLocation, remoteMetadata.etag());
+                updateLocalFileAndMetadata(downloadFile, remoteMetadata);
+            }
+        }
+        
+        private void updateLocalFileAndMetadata(File tempFile, FileMetadata remoteMetadata) {
+            File newFile = mediaFile(remoteMetadata.etag());
+            if (!newFile.equals(tempFile)) {
+                if (!fileSystem.rename(tempFile, newFile)) {
+                    throw new RuntimeException("Failed to rename " + tempFile + " to " + newFile);
+                }
+            }
+            FileMetadata inferredMetadata = inferMediaMetadata(newFile);
+            metadata = remoteMetadata.updateFrom(inferredMetadata);
+            localFile = newFile;
+        }
+        
+        public FileMetadata getMediaMetadata() {
+            return metadata;
+        }
+        
+        public void putMedia(MediaContent content) {
+            File uploadFile = mediaFile(UPLOAD_FILE_SUFFIX);
+            try(AutoLock al = new AutoLock(lock)) {
+                log.info("Writing media to temporary upload file {}...", uploadFile);
+                try {
+                    fileSystem.writeAudio(content.stream(), uploadFile);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to write media to disk at " + uploadFile, e);
+                }
+                FileMetadata mediaMetadata = inferMediaMetadata(uploadFile);
                 // Combine whatever metadata we had before with newly-provided and inferred metadata
                 this.metadata = metadata.updateFrom(content.metadata()).updateFrom(mediaMetadata);
                 // TODO do this asynchronously? Maybe have a background thread that flushes uploads?
-                log.info("Uploading media to {}...", mediaLocation);
-                remote.uploadMedia(localFile, mediaLocation);
-                // Update metadata with what can be inferred from file
-                remote.updateMetadata(metadata, mediaLocation);
-                // Get the current ETag
-                downloadMetadata();
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to upload media to blob " + mediaLocation, e);
+                try {
+                    log.info("Uploading media to {}...", mediaLocation);
+                    remote.uploadMedia(uploadFile, mediaLocation);
+                    // Update metadata with what can be inferred from file
+                    remote.updateMetadata(metadata, mediaLocation);
+                } catch(Exception e) {
+                   throw new RuntimeException("Failed to upload media and/or metadata to " + mediaLocation);
+                }
+                // Get the current metadata, including ETag, which cannot be determined locally
+                // Note: theoretically this could come back null, if someone deleted the Blob out-of-band.
+                FileMetadata remoteMetadata = remote.fetchMetadata(mediaLocation);
+                updateLocalFileAndMetadata(uploadFile, remoteMetadata);
+            }
+        }
+
+        public void delete() {
+            if (!remote.exists(mediaLocation)) {
+                log.warn("No media to delete at {}.", mediaLocation);
+                return;
+            }
+            lock.lock();
+            try {
+                log.info("Deleting media for {}", mediaLocation);
+                deleteFromCache();
+                remote.deleteMedia(mediaLocation);
+                // reset the metadata, including ETag, so the media will be downloaded if recreated later.
+                metadata = FileMetadata.UNKNOWN;
+            } finally {
+                lock.unlock();
             }
         }
 
         public void deleteFromCache() {
-            if (fileSystem.exists(localFile)) {
+            if (localFile != null && fileSystem.exists(localFile)) {
                 fileSystem.delete(localFile);
             }
-            if (fileSystem.exists(metadataFile)) {
-                fileSystem.delete(metadataFile);
-            }
         }
 
-        private boolean shouldDownload() {
-            if (fileSystem.exists(localFile)) {
-                log.info("Local file {} exists; checking etag...", localFile.getAbsolutePath());
-                if (metadata != null) {
-                    FileMetadata remoteMetadata = remote.fetchMetadata(mediaLocation);
-                    if (metadata.etag().equals(remoteMetadata.etag())) {
-                        log.info("ETag matches; using cached file.", localFile.getAbsolutePath());
-                        return false;
-                    } else {
-                        log.info("ETag does not match");
-                        return true;
-                    }
-                } else {
-                    log.info("No metadata file found");
-                    return true;
-                }
-            } else {
-                log.info("No local file found");
-                return true;
-            }
-        }
-
-        private FileMetadata downloadMetadata() {
-            FileMetadata remoteMetadata = remote.fetchMetadata(mediaLocation);
-            metadata = remoteMetadata.updateFrom(mediaMetadata);
-            writeMetadataToCache();
-            return metadata;
-        }
-
-        private void writeMetadataToCache() {
-            log.info("Writing metadata to cache file {}", metadataFile.getAbsolutePath());
-            try (OutputStream os = fileSystem.getOutputStream(metadataFile)) {
-                MAPPER.writeValue(os, metadata);
-            } catch (IOException e) {
-                log.atError().addArgument(metadataFile.getAbsolutePath()).setCause(e).log("Failed to write metadata file {}");
-            }
-        }
-
-        private FileMetadata readMetadata() {
+        private FileMetadata inferMediaMetadata(File file) {
             try {
-                return MAPPER.readValue(fileSystem.getInputStream(metadataFile), FileMetadata.class);
-            } catch(IOException e) {
-                throw new RuntimeException("Unexpected error parsing metadata file " + metadataFile.getAbsolutePath(), e);
+                return FileMetadata.fromAudioFileFormat(fileSystem.getAudioFileFormat(file));
+            } catch (IOException | UnsupportedAudioFileException e) {
+                log.error("Unable to infer metadata from media file {}", file);
+                return FileMetadata.UNKNOWN;
             }
         }
-            
-        private File mediaFile() {
-            String localFileName = URLEncoder.encode(mediaLocation, StandardCharsets.UTF_8);
-            return new File(cacheDir, localFileName);
+
+        private File mediaFile(String suffix) {
+            return DiskCachingMediaStorage.this.mediaFile(mediaLocation, suffix);
         }
-        
-        private File metadataFile() {
-            return new File(cacheDir, localFileName(mediaLocation) + METADATA_SUFFIX);
-        }
-        
-        private static String localFileName(String mediaLocation) {
-            return URLEncoder.encode(mediaLocation, StandardCharsets.UTF_8);
-        }       
     }
 
     public MediaContent getMedia(String mediaLocation) {
         Preconditions.checkNotNull(mediaLocation);
-        Preconditions.checkArgument(!mediaLocation.endsWith(METADATA_SUFFIX), "Locations must not end with " + METADATA_SUFFIX);
-        return new CachingMediaClient(mediaLocation).getMedia();
+        return getClient(mediaLocation).getMedia();
     }
 
     public void putMedia(String mediaLocation, MediaContent content) {
         Preconditions.checkNotNull(mediaLocation);
-        Preconditions.checkArgument(!mediaLocation.endsWith(METADATA_SUFFIX), "Locations must not end with " + METADATA_SUFFIX);
         Preconditions.checkNotNull(content);
-        new CachingMediaClient(mediaLocation).putMedia(content);
+        getClient(mediaLocation).putMedia(content);
     }
 
     public FileMetadata getMediaMetadata(String mediaLocation) {
         Preconditions.checkNotNull(mediaLocation);
-        return new CachingMediaClient(mediaLocation).getMediaMetadata();
+        return getClient(mediaLocation).getMediaMetadata();
+    }
+
+    @Override
+    public void deleteMedia(String mediaLocation) {
+        getClient(mediaLocation).delete();        
     }
 
     public void deleteFromCache(String mediaLocation) {
+        getClient(mediaLocation).deleteFromCache();
+        locationClients.invalidate(mediaLocation);
+    }
 
+    @VisibleForTesting
+    File mediaFile(String mediaLocation, String suffix) {
+        String localFileName = URLEncoder.encode(mediaLocation, StandardCharsets.UTF_8) + "." + suffix;
+        return new File(cacheDir, localFileName);
+    }
+
+    private CachingMediaClient getClient(String mediaLocation) {
+        try {
+            return locationClients.get(mediaLocation);
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Failed to get caching client for " + mediaLocation);
+        }
     }
 }
