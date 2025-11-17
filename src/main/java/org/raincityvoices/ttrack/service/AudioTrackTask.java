@@ -9,14 +9,16 @@ import java.util.concurrent.Callable;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.AudioDebugger;
+import org.raincityvoices.ttrack.service.audio.Ffmpeg;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
+import org.raincityvoices.ttrack.service.util.FileManager;
+import org.raincityvoices.ttrack.service.util.Temp;
 
 import com.azure.cosmos.implementation.apachecommons.lang.StringUtils;
 import com.google.common.base.Preconditions;
@@ -35,23 +37,21 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
     private final AudioDebugger.Settings debugSettings;
     private final SongStorage songStorage;
     private final MediaStorage mediaStorage;
+    private final FileManager fileManager;
+    private final Ffmpeg ffmpeg;
     
     private AudioTrackDTO track;
 
-    protected AudioTrackTask(AudioTrackDTO track, SongStorage songStorage, MediaStorage mediaStorage) {
-        this(track, songStorage, mediaStorage, AudioDebugger.Settings.NONE);
-    }
-
-    protected AudioTrackTask(AudioTrackDTO track, SongStorage songStorage, MediaStorage mediaStorage, AudioDebugger.Settings debugSettings) {
-        // defensively clone the track
-        // TODO need to do optimistic locking?
+    protected AudioTrackTask(AudioTrackDTO track, AudioTrackTaskFactory factory) {
         Preconditions.checkNotNull(track);
-        Preconditions.checkNotNull(songStorage);
+        Preconditions.checkNotNull(factory);
         this.songId = track.getSongId();
         this.trackId = track.getId();
-        this.songStorage = songStorage;
-        this.mediaStorage = mediaStorage;
-        this.debugSettings = debugSettings;
+        this.songStorage = factory.getSongStorage();
+        this.mediaStorage = factory.getMediaStorage();
+        this.fileManager = factory.getFileManager();
+        this.ffmpeg = factory.getFfmpeg();
+        this.debugSettings = factory.getDebugSettings();
     }
 
     @Override
@@ -103,12 +103,22 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
         if (track().getMediaLocation() == null) {
             track().setMediaLocation(mediaStorage.mediaLocationFor(new SongId(track.getSongId()), track.getId()));
         }
-        log.info("Uploading audio file to {}...", track.getMediaLocation());
-        FileMetadata metadata = FileMetadata.builder()
-            .fileName(originalFileName)
-            .build();
-        mediaStorage().putMedia(track().getMediaLocation(), new MediaContent(stream, metadata));
-        log.info("Audio uploaded.");
+        log.info("Processing audio to upload to {}", track().getMediaLocation());
+        try(Temp.File tempWav = Temp.file("mix", ".wav");
+            Temp.File tempMp3 = Temp.file("mix", ".mp3")) {
+            log.info("Writing audio to temp file {}...", tempWav);
+            fileManager.writeWavAudio(stream, tempWav);
+            log.info("Converting to MP3 file {}...", tempMp3);
+            ffmpeg.convertToMp3(tempWav, tempMp3);
+            log.info("Uploading MP3 audio file to {}...", track.getMediaLocation());
+            InputStream mediaStream = new BufferedInputStream(new FileInputStream(tempMp3));
+            FileMetadata metadata = FileMetadata.builder().fileName(originalFileName).build();
+            mediaStorage().putMedia(track().getMediaLocation(), new MediaContent(mediaStream, metadata));
+            log.info("Audio uploaded.");
+        } catch(Exception e) {
+            log.error("Exception while processing mix track {}/{}", songId(), trackId(), e);
+            throw new RuntimeException(e);
+        }
         log.info("Updating track metadata");
         FileMetadata updatedMetadata = mediaStorage().getMediaMetadata(track().getMediaLocation());
         log.debug("New metadata: {}", updatedMetadata);
@@ -120,14 +130,14 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
 
     protected AudioTrackDTO uploadFile(File file, String originalFileName) {
         final FileMetadata metadata = getMetadata(file, originalFileName);
-        try (AudioInputStream stream = AudioSystem.getAudioInputStream(file)) {
+        try (InputStream stream = new FileInputStream(file)) {
             log.info("Uploading audio file...");
             mediaStorage().putMedia(track().getMediaLocation(), new MediaContent(stream, metadata));
             log.info("Saving track with new metadata...");
             track.setMediaLocation(track().getMediaLocation());
             track.setDurationSec((int)metadata.durationSec());
             return track;
-        } catch(IOException | UnsupportedAudioFileException e) {
+        } catch(IOException e) {
             throw new RuntimeException("Failed to open file " + file + " for reading.", e);
         }
     }
@@ -136,7 +146,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
         final FileMetadata metadata;
         try {
             log.info("Inspecting audio format for file {}", file);
-            AudioFileFormat format = AudioSystem.getAudioFileFormat(file);
+            AudioFileFormat format = fileManager().getAudioFileFormat(file);
             metadata = FileMetadata.fromAudioFileFormat(format)
                                    .withFileName(StringUtils.defaultString(originalFileName, file.getName()));
             log.info("File metadata: {}", metadata);

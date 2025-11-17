@@ -8,10 +8,14 @@ import com.google.common.collect.ImmutableList;
 
 public class TestData {
 
+    public static final String SUNSHINE_SONG_ID = "60923a30";
+
     public static final AudioPart LEAD = new AudioPart("Lead");
     public static final AudioPart BASS = new AudioPart("Bass");
     public static final AudioPart TENOR = new AudioPart("Tenor");
     public static final AudioPart BARI = new AudioPart("Bari");
+
+    public static final List<String> BBS_4_PART_NAMES = ImmutableList.of("Bass", "Bari", "Lead", "Tenor");
 
     public static final List<AudioPart> BBS_4_PARTS = ImmutableList.of(BASS, BARI, LEAD, TENOR);
     public static final List<AudioPart> BBS_NO_TENOR = ImmutableList.of(BASS, BARI, LEAD);

@@ -25,7 +25,8 @@ import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
-import org.raincityvoices.ttrack.service.util.TempFile;
+import org.raincityvoices.ttrack.service.util.FileManager;
+import org.raincityvoices.ttrack.service.util.Temp;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -60,6 +61,7 @@ public class SongController {
 
     private final SongStorage songStorage;
     private final MediaStorage mediaStorage;
+    private final FileManager fileManager;
     private final AudioTrackTaskFactory taskFactory;
     private final ExecutorService executorService = Executors.newFixedThreadPool(3);
 
@@ -155,11 +157,11 @@ public class SongController {
             String mediaLocation = mediaStorage.mediaLocationFor(songId, track.getId());
             mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
             track.setMediaLocation(mediaLocation);
-            executorService.submit(new ProcessUploadedTrackTask(track, songStorage, mediaStorage));
+            executorService.submit(taskFactory.newProcessUploadedTrackTask(track));
         } else {
-            try(TempFile tf = new TempFile("part")) {
-                audioFile.transferTo(tf.file());
-                executorService.submit(new UploadPartTrackTask(track, tf.transferOwnership(), audioFile.getOriginalFilename(), songStorage, mediaStorage));
+            try(Temp.File tf = fileManager.tempFile("part", "")) {
+                audioFile.transferTo(tf);
+                executorService.submit(taskFactory.newUploadPartTrackTask(track, tf.transferOwnership(), audioFile.getOriginalFilename()));
             }
         }
         return part.name();
@@ -199,7 +201,7 @@ public class SongController {
         }
         String fileName = StringUtils.defaultIfBlank(content.metadata().fileName(), defaultFileName);
         String disposition = ContentDisposition.attachment().filename(fileName).build().toString();
-        log.debug("disposition: {}", disposition);
+        log.debug("disposition: {}", disposition); 
         response.setHeader("Content-Disposition", disposition);
         try {
             IOUtils.copy(content.stream(), response.getOutputStream());

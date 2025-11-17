@@ -89,6 +89,7 @@ public class AudioMixingStream extends AudioInputStream {
                 int readBytes = inputStreams[i].read(bb.array(), 0, bytesToRead);
                 int readFrames = readBytes / format(i).getFrameSize();
                 if (readBytes < 0) {
+                    log.info("EOF for stream {}", i);
                     // EOF. No data read.
                     return -1;
                 }

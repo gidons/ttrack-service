@@ -37,6 +37,6 @@ public interface SongStorage {
     default AudioTrackDTO describeMix(String songId, String mixName) {
         return describeTrack(songId, mixName);
     }
-    void deleteTrack(String songId, String trackId);
+    boolean deleteTrack(String songId, String trackId);
     AudioTrackDTO writeTrack(AudioTrackDTO trackDto);
 }

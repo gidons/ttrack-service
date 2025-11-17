@@ -9,16 +9,13 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 
 import org.raincityvoices.ttrack.service.FileMetadata;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import com.azure.storage.blob.BlobAsyncClient;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.models.BlobDownloadResponse;
 import com.azure.storage.blob.models.BlobRequestConditions;
 import com.azure.storage.blob.models.BlobStorageException;
-import com.azure.storage.blob.options.BlobDownloadToFileOptions;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

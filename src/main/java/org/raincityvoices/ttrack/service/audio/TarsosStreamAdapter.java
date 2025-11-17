@@ -32,6 +32,7 @@ public class TarsosStreamAdapter implements Closeable {
     private final AudioFormat format;
     private final Thread dispatcherThread;
     private final ProcessingStream stream;
+    private final AudioInputStream audioStream;
     /** 
      * Queue where audio data is stored until read; each entry in the queue is for one AudioEvent. 
      */
@@ -67,8 +68,12 @@ public class TarsosStreamAdapter implements Closeable {
 
         @Override
         public void processingFinished() {
-            log.debug("Processing finished ({} total bytes processed): queuing END_MARKER", byteCount);
-            bufferQueue.offer(END_MARKER);
+            log.debug("Processing finished: queueing END_MARKER. Total bytes processed: {}.", byteCount);
+            try {
+                bufferQueue.put(END_MARKER);  // ← Use put() to block until added
+            } catch (InterruptedException e) {
+                throw new RuntimeException("Interrupted while adding END_MARKER", e);
+            }
             log.debug("END_MARKER added.");
         }
 
@@ -126,6 +131,7 @@ public class TarsosStreamAdapter implements Closeable {
         this.bufferQueue = new ArrayBlockingQueue<>(10);
         this.currentBuffer = ByteBuffer.allocate(0);
         stream = new ProcessingStream(new AudioDebugger("TarsosStream", format, debuggerSettings));
+        audioStream = new AudioInputStream(stream, format, AudioSystem.NOT_SPECIFIED);
         dispatcher.addAudioProcessor(new Processor());
         this.dispatcherThread = new Thread(String.format("TarsosStreamDispatcher-%x", hashCode())) {
             public void run() {
@@ -139,14 +145,24 @@ public class TarsosStreamAdapter implements Closeable {
     }
 
     public AudioInputStream getAudioInputStream() {
-        return new AudioInputStream(stream, format, AudioSystem.NOT_SPECIFIED);
+        return audioStream;
     }
 
     @Override
     public void close() throws IOException {
         try {
             log.info("Waiting for dispatcher thread {} to end...", dispatcherThread.getName());
-            dispatcherThread.join(100);
+            dispatcherThread.join(1000);
+            if (dispatcherThread.isAlive()) {
+                log.warn("Dispatcher thread {} did not complete in time, interrupting...", dispatcherThread.getName());
+                dispatcherThread.interrupt();
+            }
+            log.info("Closing stream...");
+            try {
+                audioStream.close();
+            } catch(Exception e) {
+                log.warn("Caught exception while closing stream: {}", e.getMessage());
+            }
         } catch (InterruptedException e) {
             log.warn("Interrupted while waiting for dispatcher thread {} to join.", dispatcherThread.getName());
         }        

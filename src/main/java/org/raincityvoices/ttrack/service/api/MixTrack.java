@@ -23,6 +23,7 @@ import lombok.extern.jackson.Jacksonized;
 @SuperBuilder(toBuilder = true)
 @Accessors(fluent = true)
 @Jacksonized
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MixTrack extends AudioTrack {
 
     private final MixInfo mixInfo;

@@ -1,0 +1,17 @@
+{"properties": [
+  {
+    "name": "azure.tables.endpoint",
+    "type": "java.lang.String",
+    "description": "The endpoint to use for Azure Tables API."
+},
+{
+    "name": "azure.blobs.endpoint",
+    "type": "java.lang.String",
+    "description": "The endpoint to use for Azure BlobStorage API."
+  },
+  {
+    "name": "service.cache.directory",
+    "type": "java.lang.String",
+    "description": "Directory to use for caching audio files on disk."
+  }
+]}

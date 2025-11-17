@@ -7,12 +7,14 @@ import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Builder.Default;
 import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.jackson.Jacksonized;
 
 @Value
+@EqualsAndHashCode(callSuper = false)
 @Accessors(fluent = true)
 @Builder
 @Jacksonized

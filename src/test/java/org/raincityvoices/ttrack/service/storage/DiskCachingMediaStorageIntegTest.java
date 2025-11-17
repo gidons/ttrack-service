@@ -9,8 +9,6 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @SpringBootTest
 public class DiskCachingMediaStorageIntegTest {
-
     
     private static final String FILENAME = "Sunshine Lead.wav";
     private static final File TEST_WAV_FILE = new File("./src/test/resources/sunshine-lead.wav");
@@ -95,8 +92,8 @@ public class DiskCachingMediaStorageIntegTest {
     @Test
     public void testEndToEnd() throws Exception {
         AudioInputStream mediaStream = AudioSystem.getAudioInputStream(TEST_WAV_FILE);
-        byte[] originalBytes = IOUtils.toByteArray(mediaStream);
         mediaStream = AudioSystem.getAudioInputStream(TEST_WAV_FILE);
+        byte[] originalBytes = IOUtils.toByteArray(mediaStream);
         FileMetadata metadata = FileMetadata.builder()
             .fileName(FILENAME)
             .build();

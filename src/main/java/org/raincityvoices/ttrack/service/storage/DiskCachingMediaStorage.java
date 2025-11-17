@@ -1,10 +1,6 @@
 package org.raincityvoices.ttrack.service.storage;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -13,15 +9,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantLock;
 
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
-import javax.sound.sampled.AudioFileFormat.Type;
 
 import org.raincityvoices.ttrack.service.FileMetadata;
 import org.raincityvoices.ttrack.service.MediaContent;
 import org.raincityvoices.ttrack.service.util.AutoLock;
+import org.raincityvoices.ttrack.service.util.DefaultFileManager;
+import org.raincityvoices.ttrack.service.util.FileManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.CacheBuilder;
@@ -47,51 +41,13 @@ public class DiskCachingMediaStorage implements MediaStorage {
         void updateMetadata(FileMetadata metadata, String location);
         void deleteMedia(String mediaLocation);
     }
-
-    /** Testable wrapper around static filesystem calls */
-    @VisibleForTesting
-    interface FileSystem {
-        AudioInputStream getInputStream(File file) throws IOException, UnsupportedAudioFileException;
-        void writeAudio(AudioInputStream audio, File file) throws IOException;
-        AudioFileFormat getAudioFileFormat(File file) throws IOException, UnsupportedAudioFileException;
-        boolean exists(File file);
-        boolean delete(File file);
-        boolean rename(File oldName, File newName);
-    }
-
-    private static FileSystem DEFAULT_FILE_SYSTEM = new FileSystem() {
-        @Override
-        public AudioInputStream getInputStream(File file) throws IOException, UnsupportedAudioFileException {
-            return AudioSystem.getAudioInputStream(file);
-        }
-        @Override
-        public void writeAudio(AudioInputStream audio, File file) throws IOException {
-            AudioSystem.write(audio, Type.WAVE, file);
-        }
-        @Override
-        public AudioFileFormat getAudioFileFormat(File file) throws IOException, UnsupportedAudioFileException {
-            return AudioSystem.getAudioFileFormat(file);
-        }
-        @Override
-        public boolean exists(File file) {
-            return file.exists();
-        }
-        @Override
-        public boolean delete(File file) {
-            return file.delete();
-        }
-        @Override
-        public boolean rename(File oldName, File newName) {
-            return oldName.renameTo(newName);
-        }
-    };
     
     static final String UPLOAD_FILE_SUFFIX = "upload";
     static final String DOWNLOAD_FILE_SUFFIX = "download";
     
     private final RemoteStorage remote;
     private final File cacheDir;
-    private final FileSystem fileSystem;
+    private final FileManager fileManager;
     
     private final LoadingCache<String, CachingMediaClient> locationClients = CacheBuilder.newBuilder()
         .maximumSize(10)
@@ -99,13 +55,13 @@ public class DiskCachingMediaStorage implements MediaStorage {
         .build(CacheLoader.from(l -> new CachingMediaClient(l)));
     
     public DiskCachingMediaStorage(RemoteStorage remoteStorage, File cacheDir) {
-        this(remoteStorage, cacheDir, DEFAULT_FILE_SYSTEM);
+        this(remoteStorage, cacheDir, new DefaultFileManager());
     }
     
-    public DiskCachingMediaStorage(RemoteStorage remoteStorage, File cacheDir, FileSystem fileSystem) {
+    public DiskCachingMediaStorage(RemoteStorage remoteStorage, File cacheDir, FileManager fileManager) {
         this.remote = remoteStorage;
         this.cacheDir = cacheDir;
-        this.fileSystem = fileSystem;
+        this.fileManager = fileManager;
     }
     
     private class CachingMediaClient {
@@ -121,7 +77,7 @@ public class DiskCachingMediaStorage implements MediaStorage {
             FileMetadata remoteMetadata = remote.fetchMetadata(mediaLocation);
             if (remoteMetadata != null) {
                 File expectedFile = mediaFile(remoteMetadata.etag());
-                if (fileSystem.exists(expectedFile)) {
+                if (fileManager.exists(expectedFile)) {
                     updateLocalFileAndMetadata(expectedFile, remoteMetadata);
                 }
             }
@@ -132,10 +88,11 @@ public class DiskCachingMediaStorage implements MediaStorage {
                 throw new IllegalArgumentException("No media found at location " + mediaLocation);
             }
             downloadIfNecessary();
+            InputStream stream;
             try {
-                AudioInputStream stream = fileSystem.getInputStream(localFile);
+                stream = fileManager.getInputStream(localFile);
                 return new MediaContent(stream, metadata);
-            } catch (IOException | UnsupportedAudioFileException e) {
+            } catch (IOException e) {
                 throw new RuntimeException("Failed to read media from local file " + localFile);
             }
         }
@@ -161,7 +118,7 @@ public class DiskCachingMediaStorage implements MediaStorage {
         private void updateLocalFileAndMetadata(File tempFile, FileMetadata remoteMetadata) {
             File newFile = mediaFile(remoteMetadata.etag());
             if (!newFile.equals(tempFile)) {
-                if (!fileSystem.rename(tempFile, newFile)) {
+                if (!fileManager.rename(tempFile, newFile)) {
                     throw new RuntimeException("Failed to rename " + tempFile + " to " + newFile);
                 }
             }
@@ -178,8 +135,8 @@ public class DiskCachingMediaStorage implements MediaStorage {
             File uploadFile = mediaFile(UPLOAD_FILE_SUFFIX);
             try(AutoLock al = new AutoLock(lock)) {
                 log.info("Writing media to temporary upload file {}...", uploadFile);
-                try {
-                    fileSystem.writeAudio(content.stream(), uploadFile);
+                try(OutputStream fos = fileManager.getOutputStream(uploadFile)) {
+                    content.stream().transferTo(fos);
                 } catch (IOException e) {
                     throw new RuntimeException("Failed to write media to disk at " + uploadFile, e);
                 }
@@ -202,10 +159,10 @@ public class DiskCachingMediaStorage implements MediaStorage {
             }
         }
 
-        public void delete() {
+        public boolean delete() {
             if (!remote.exists(mediaLocation)) {
                 log.warn("No media to delete at {}.", mediaLocation);
-                return;
+                return false;
             }
             lock.lock();
             try {
@@ -214,20 +171,21 @@ public class DiskCachingMediaStorage implements MediaStorage {
                 remote.deleteMedia(mediaLocation);
                 // reset the metadata, including ETag, so the media will be downloaded if recreated later.
                 metadata = FileMetadata.UNKNOWN;
+                return true;
             } finally {
                 lock.unlock();
             }
         }
 
         public void deleteFromCache() {
-            if (localFile != null && fileSystem.exists(localFile)) {
-                fileSystem.delete(localFile);
+            if (localFile != null && fileManager.exists(localFile)) {
+                fileManager.delete(localFile);
             }
         }
 
         private FileMetadata inferMediaMetadata(File file) {
             try {
-                return FileMetadata.fromAudioFileFormat(fileSystem.getAudioFileFormat(file));
+                return FileMetadata.fromAudioFileFormat(fileManager.getAudioFileFormat(file));
             } catch (IOException | UnsupportedAudioFileException e) {
                 log.error("Unable to infer metadata from media file {}", file);
                 return FileMetadata.UNKNOWN;
@@ -256,8 +214,8 @@ public class DiskCachingMediaStorage implements MediaStorage {
     }
 
     @Override
-    public void deleteMedia(String mediaLocation) {
-        getClient(mediaLocation).delete();        
+    public boolean deleteMedia(String mediaLocation) {
+        return getClient(mediaLocation).delete();        
     }
 
     public void deleteFromCache(String mediaLocation) {
