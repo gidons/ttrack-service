@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service;
+package org.raincityvoices.ttrack.service.tasks;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -15,6 +15,8 @@ import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.AudioDebugger;
 import org.raincityvoices.ttrack.service.audio.Ffmpeg;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.MediaContent;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;

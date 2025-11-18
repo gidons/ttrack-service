@@ -1,6 +1,7 @@
 package org.raincityvoices.ttrack.service;
 
 import org.junit.jupiter.api.Test;
+import org.raincityvoices.ttrack.service.storage.FileMetadata;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

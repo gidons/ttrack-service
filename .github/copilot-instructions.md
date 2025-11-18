@@ -5,10 +5,16 @@ This file captures concise, concrete knowledge an AI coding assistant needs to b
 1. Big-picture
    - This is a Spring Boot 3.5 web service (entry: `ServiceApplication`).
    - Primary domain: storing, serving and mixing song audio parts. Key packages:
-     - `org.raincityvoices.ttrack.service` — REST controllers and application wiring (`SongController`, `AudioMixer`, `AzureClients`).
+     - `org.raincityvoices.ttrack.service` — REST controllers and application wiring (`SongController`, `ServiceApplication`, `WebConfigurer`).
      - `org.raincityvoices.ttrack.service.audio` — audio processing utilities (mixing, streams).
      - `org.raincityvoices.ttrack.service.audio.model` — audio domain models (`AudioPart`, `AudioMix`, formats).
-     - `org.raincityvoices.ttrack.service.storage` — persistence DTOs and `SongStorage` abstraction used for Azure Table + Blob storage.
+     - `org.raincityvoices.ttrack.service.storage` — persistence DTOs, `SongStorage` abstraction used for Azure Table storage, and `MediaStorage` abstraction for Azure Blob storage. Also some internal model classes (`FileMetadata` and `MediaContent`).
+     - `org.raincityvoices.ttrack.service.tasks` - implementation of code for processing audio asynchronously.
+     - `org.raincityvoices.ttrack.service.api` - REST model classes.
+     - `org.raincityvoices.ttrack.service.util` - Utility classes, as well as the `FileManager` abstraction to simplify testing
+         without relying on the file system.
+     - `org.raincityvoices.ttrack.service.config` - Spring Java configurations.
+
 
 2. Build / run / test
    - Use Maven wrapper in repo root: `./mvnw clean package` to build and `./mvnw test` to run tests.
@@ -22,22 +28,23 @@ This file captures concise, concrete knowledge an AI coding assistant needs to b
 
 4. Important patterns & conventions
    - DTOs vs API models: persistence objects live under `service.storage.*` (e.g., `AudioTrackDTO`, `SongDTO`) and convert to API models under `service.api.*`.
-   - Audio files are streamed via `MediaContent` wrappers and passed to `AudioSystem` for format detection and mixing.
-   - Mixing is performed asynchronously: controller submits `AudioMixer` to a fixed thread pool (see `SongController.executorService`). Keep thread-safety and blocking IO in mind when editing.
+   - Audio files are streamed via `MediaContent` wrappers and passed to `FileManager` for format detection and I/O.
+   - Long-running tasks (more than a second or so) are executed asynchronously as an instance of `AudioTrackTask`, which is created by the singleton `AudioTrackTaskFactory`.
+         Keep thread-safety and blocking IO in mind when editing.
    - Audio parts are represented by `AudioPart` (extends `StringId`). Each part should be a mono channel.
 
 5. Error handling & HTTP behavior
-   - Controllers use `ErrorResponseException` with HTTP status codes for client errors (404, 409, 400, 500). When adding new endpoints, follow the same pattern.
+   - Controllers use `ErrorResponseException` with HTTP status codes for client errors (404, 409, 400, 500). When adding new endpoints,follow the same pattern.
    - Downloads set Content-Disposition and content type from `MediaContent.metadata()` in `SongController.downloadTrack`.
 
 6. Where to change behavior
-   - To alter storage behavior, modify implementations of `SongStorage` (search for implementations under `service.storage`).
+   - To alter storage behavior, modify implementations of `SongStorage` and `MediaStorage` (search for implementations under `service.storage`).
    - To change how Azure credentials are resolved, update `AzureClients.cliCredential()` — current approach expects local `az` authentication.
-   - To add new audio processing features, look at `AudioMixingStream`, `MixUtils`, and `AudioMixer` for examples of audio IO and temporary-file usage.
+   - To add new audio processing features, look at `AudioMixingStream`, `MixUtils`, and `CreateMixTrackTask` for examples of audio IO and temporary-file usage.
 
 7. Quick examples (copyable references)
    - Persist a new mix: `songStorage.writeTrack(AudioTrackDTO.fromMixTrack(mixTrack))` (used in `SongController.createMixTrack`).
-   - Read part media for mixing: `MediaContent content = songStorage.readMedia(partTrack.blobName()); InputStream in = content.stream();` (used in `AudioMixer`).
+   - Read part media for mixing: `MediaContent content = mediaStorage.getMedia(mediaStorage.mediaLocationFor(songId, trackId)); InputStream in = content.stream();` (used in `CreateMixTrackTask`).
 
 8. Tests & fixtures
    - Unit tests for audio mixing live under `src/test/java/org/raincityvoices/ttrack/service/audio` and `audio.model` (see `StereoMixTest`, `MonoMixTest`). Use those as templates for audio-related tests.

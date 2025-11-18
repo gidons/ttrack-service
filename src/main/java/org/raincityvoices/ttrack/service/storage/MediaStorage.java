@@ -1,7 +1,5 @@
 package org.raincityvoices.ttrack.service.storage;
 
-import org.raincityvoices.ttrack.service.FileMetadata;
-import org.raincityvoices.ttrack.service.MediaContent;
 import org.raincityvoices.ttrack.service.api.SongId;
 
 public interface MediaStorage {

@@ -1,16 +1,18 @@
-package org.raincityvoices.ttrack.service;
+package org.raincityvoices.ttrack.service.tasks;
 
 import java.util.List;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 
+import org.raincityvoices.ttrack.service.SongController;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.audio.AudioMixingStream;
 import org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter;
 import org.raincityvoices.ttrack.service.audio.TarsosUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.MediaContent;
 
 import com.azure.cosmos.implementation.guava25.base.Preconditions;
 

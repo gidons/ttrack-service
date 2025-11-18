@@ -28,8 +28,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.raincityvoices.ttrack.service.FileMetadata;
-import org.raincityvoices.ttrack.service.MediaContent;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.storage.DiskCachingMediaStorage.RemoteStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;

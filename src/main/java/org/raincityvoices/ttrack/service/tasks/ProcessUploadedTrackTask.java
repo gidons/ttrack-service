@@ -1,9 +1,11 @@
-package org.raincityvoices.ttrack.service;
+package org.raincityvoices.ttrack.service.tasks;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioSystem;
 
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.MediaContent;
 
 import com.google.common.base.Preconditions;
 

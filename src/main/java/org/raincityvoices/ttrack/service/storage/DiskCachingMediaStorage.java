@@ -11,8 +11,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import org.raincityvoices.ttrack.service.FileMetadata;
-import org.raincityvoices.ttrack.service.MediaContent;
 import org.raincityvoices.ttrack.service.util.AutoLock;
 import org.raincityvoices.ttrack.service.util.DefaultFileManager;
 import org.raincityvoices.ttrack.service.util.FileManager;
