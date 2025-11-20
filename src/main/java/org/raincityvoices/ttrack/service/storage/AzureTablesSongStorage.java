@@ -15,15 +15,13 @@ import com.azure.data.tables.models.ListEntitiesOptions;
 import com.azure.data.tables.models.TableEntity;
 import com.azure.data.tables.models.TableServiceException;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@RequiredArgsConstructor
 @Component
 public class AzureTablesSongStorage implements SongStorage {
 
-    private final TableClient songsClient;
+    private final TableClient tableClient;
 
     private final TableEntityMapper<SongDTO> songMapper = new TableEntityMapper<>(SongDTO.class);
     private final TableEntityMapper<AudioTrackDTO> trackMapper = new TableEntityMapper<>(AudioTrackDTO.class);
@@ -32,10 +30,14 @@ public class AzureTablesSongStorage implements SongStorage {
 
     private final Clock clock = Clock.systemUTC();
 
+    public AzureTablesSongStorage(TableClient songsTableClient) {
+        this.tableClient = songsTableClient;
+    }
+
     @Override
     public List<SongDTO> listAllSongs() {
         log.info("Listing all songs");
-        PagedIterable<TableEntity> results = songsClient.listEntities(new ListEntitiesOptions()
+        PagedIterable<TableEntity> results = tableClient.listEntities(new ListEntitiesOptions()
             .setFilter("RowKey eq ''"), null, null);
         return results.stream().map(songMapper::fromTableEntity).toList();
     }
@@ -44,7 +46,7 @@ public class AzureTablesSongStorage implements SongStorage {
     public SongDTO describeSong(String songId) {
         log.info("Reading song with ID {}", songId);
         try {
-            TableEntity entity = songsClient.getEntity(songId, "");
+            TableEntity entity = tableClient.getEntity(songId, "");
             log.debug("Table entity: {}", entity.getProperties());
             return songMapper.fromTableEntity(entity);
         } catch (TableServiceException e) {
@@ -68,7 +70,7 @@ public class AzureTablesSongStorage implements SongStorage {
         try {
             TableEntity entity = songMapper.toTableEntity(songDto);
             log.debug("Table entity: {}", entity.getProperties());
-            songsClient.upsertEntity(entity);
+            tableClient.upsertEntity(entity);
         } catch(Exception e) {
             throw new RuntimeException("Failed to write song " + songDto.getId() + " to table.", e);
         }
@@ -90,7 +92,7 @@ public class AzureTablesSongStorage implements SongStorage {
         log.info("Listing tracks for song ID {}", songId);
         String query = String.format("PartitionKey eq '%s' and RowKey ne ''", songId);
         log.debug("Query: {}", query);
-        PagedIterable<TableEntity> results = songsClient.listEntities(new ListEntitiesOptions()
+        PagedIterable<TableEntity> results = tableClient.listEntities(new ListEntitiesOptions()
             .setFilter(query), null, null);
         return results.stream().map(trackMapper::fromTableEntity).toList();
     }
@@ -101,7 +103,7 @@ public class AzureTablesSongStorage implements SongStorage {
         Preconditions.checkNotNull(trackId);
         log.info("Reading track with ID {} for song ID {}", trackId, songId);
         try {
-            TableEntity entity = songsClient.getEntity(songId, trackId);
+            TableEntity entity = tableClient.getEntity(songId, trackId);
             log.debug("Table entity: {}", entity.getProperties());
             return trackMapper.fromTableEntity(entity);
         } catch (TableServiceException e) {
@@ -128,7 +130,7 @@ public class AzureTablesSongStorage implements SongStorage {
         try {
             TableEntity entity = trackMapper.toTableEntity(trackDto);
             log.debug("Table entity: {}", entity.getProperties());
-            songsClient.upsertEntity(entity);
+            tableClient.upsertEntity(entity);
         } catch(Exception e) {
             throw new RuntimeException("Failed to write track " + trackDto.getId() + " to table.", e);
         }
@@ -141,7 +143,7 @@ public class AzureTablesSongStorage implements SongStorage {
         Preconditions.checkNotNull(trackId);
 
         try {
-            songsClient.deleteEntity(songId, trackId);
+            tableClient.deleteEntity(songId, trackId);
             return true;
         } catch(TableServiceException e) {
             if (e.getResponse().getStatusCode() == 404) {

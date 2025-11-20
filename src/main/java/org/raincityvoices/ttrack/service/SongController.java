@@ -21,6 +21,9 @@ import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
+import org.raincityvoices.ttrack.service.exceptions.BadRequestException;
+import org.raincityvoices.ttrack.service.exceptions.ConflictException;
+import org.raincityvoices.ttrack.service.exceptions.NotFoundException;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaContent;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
@@ -30,10 +33,8 @@ import org.raincityvoices.ttrack.service.tasks.AudioTrackTaskFactory;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.raincityvoices.ttrack.service.util.Temp;
 import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.util.MimeTypeUtils;
-import org.springframework.web.ErrorResponseException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -65,7 +66,6 @@ public class SongController {
     private final MediaStorage mediaStorage;
     private final FileManager fileManager;
     private final AudioTrackTaskFactory taskFactory;
-    private final ExecutorService executorService = Executors.newFixedThreadPool(3);
 
     private static final DefaultUriBuilderFactory URI_BUILDER_FACTORY = new DefaultUriBuilderFactory("/songs/");
 
@@ -92,6 +92,9 @@ public class SongController {
     public Song getSong(@PathVariable("id") SongId songId) {
         SongDTO dto = songStorage.describeSong(songId.value());
         log.debug("Song DTO: {}", dto);
+        if (dto == null) {
+            throw new NotFoundException("Song " + songId.value() + " not found.");
+        }
         return dto.toSong();
     }
 
@@ -139,13 +142,12 @@ public class SongController {
 
     @PutMapping("/{id}/parts/{partName}")
     public String uploadMediaForPart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part, 
-                                     @QueryParam("overwrite") boolean overwrite, @QueryParam("direct") boolean direct,
-                                     @RequestParam MultipartFile audioFile) throws Exception {
+                                     @QueryParam("overwrite") boolean overwrite, @RequestParam MultipartFile audioFile) throws Exception {
         final AudioTrackDTO track;
         AudioTrackDTO existing = songStorage.describePart(songId.value(), part.name());
         if (existing != null) {
             if(!overwrite) {
-                throw new ErrorResponseException(HttpStatus.CONFLICT);
+                throw new ConflictException("Part '" + part.name() + "' already exists. Use overwrite=true to replace it.");
             }
             track = existing;
         } else {
@@ -155,17 +157,11 @@ public class SongController {
                     .build();
         }
         songStorage.writeTrack(track);
-        if (direct) {
-            String mediaLocation = mediaStorage.mediaLocationFor(songId, track.getId());
-            mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
-            track.setMediaLocation(mediaLocation);
-            executorService.submit(taskFactory.newProcessUploadedTrackTask(track));
-        } else {
-            try(Temp.File tf = fileManager.tempFile("part", "")) {
-                audioFile.transferTo(tf);
-                executorService.submit(taskFactory.newUploadPartTrackTask(track, tf.transferOwnership(), audioFile.getOriginalFilename()));
-            }
-        }
+        String mediaLocation = mediaStorage.locationFor(songId, track.getId());
+        mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
+        track.setMediaLocation(mediaLocation);
+        songStorage.writeTrack(track);
+        taskFactory.scheduleProcessUploadedTrackTask(track);
         return part.name();
     }
 
@@ -174,7 +170,7 @@ public class SongController {
         AudioTrackDTO trackDto = songStorage.describePart(songId.value(), part.name());
         if (trackDto == null || trackDto.getMediaLocation() == null) {
             log.info("Track not found or missing blobName: dto={}", trackDto);
-            throw new ErrorResponseException(HttpStatus.NOT_FOUND);
+            throw new NotFoundException("Part '" + part.name() + "' not found for song '" + songId.value() + "'");
         }
         SongDTO songDto = songStorage.describeSong(songId.value());
         if (songDto == null) {
@@ -216,6 +212,9 @@ public class SongController {
     public MixTrack describeMix(@PathVariable("id") SongId songId, @PathVariable("mixName") String mixName) {
         log.info("Starting describeMix for song ID {}, mix name {}", songId, mixName);
         AudioTrackDTO trackDto = songStorage.describeMix(songId.value(), mixName);
+        if (trackDto == null) {
+            throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
+        }
         return toMixTrack(trackDto);
     }
 
@@ -224,17 +223,17 @@ public class SongController {
         log.info("Starting downloadMediaForMix for song ID {}, mix name {}", songId, mixName);
         AudioTrackDTO dto = songStorage.describeMix(songId.value(), mixName);
         if (dto == null) {
-            log.error("Track [{}/{}] not found.", songId.value(), mixName);
-            throw new ErrorResponseException(HttpStatus.NOT_FOUND);
+            log.error("Track {}/{} not found.", songId.value(), mixName);
+            throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
         if (!dto.hasMedia()) {
-            log.error("Track [{}/{}] has no media available.", songId.value(), mixName);
-            throw new ErrorResponseException(HttpStatus.NOT_FOUND);
+            log.error("Track {} has no media available.", dto.fqId());
+            throw new NotFoundException("Mix '" + mixName + "' has no media available");
         }
         SongDTO songDto = songStorage.describeSong(songId.value());
         if (songDto == null) {
             log.error("Unexpected error: song {} not found", songId.value());
-            throw new ErrorResponseException(HttpStatus.NOT_FOUND);
+            throw new NotFoundException("Song '" + songId.value() + "' not found");
         }
         String defaultFileName = String.format("%s - %s", songDto.getTitle(), mixName);
         downloadTrack(response, dto, defaultFileName);
@@ -261,7 +260,7 @@ public class SongController {
     private void verifySongExists(SongId songId) {
         SongDTO song = songStorage.describeSong(songId.value());
         if (song == null) {
-            throw new ErrorResponseException(HttpStatus.NOT_FOUND);
+            throw new NotFoundException("Song '" + songId.value() + "' not found");
         }
     }
 
@@ -282,7 +281,7 @@ public class SongController {
         String errorMessage = request.validate();
         if (errorMessage != null) {
             log.error("Error validating CreateMixTrackRequest: {}", errorMessage);
-            throw new ErrorResponseException(HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("Invalid mix request: " + errorMessage);
         }
 
         final AudioMix mix;
@@ -290,14 +289,14 @@ public class SongController {
             mix = MixUtils.parseStereoMix(request.description(), request.parts());
         } catch(IllegalArgumentException e) {
             log.info("Unable to parse audio mix description '{}' for parts {}", request.description(), request.parts());
-            throw new ErrorResponseException(HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("Invalid mix description or parts: " + e.getMessage());
         }
         
         AudioTrackDTO existing = songStorage.describeMix(songId.value(), request.name());
         AudioTrackDTO newDto;
         if (existing != null) {
             if (!overwrite) {
-                throw new ErrorResponseException(HttpStatus.CONFLICT);
+                throw new ConflictException("Mix '" + request.name() + "' already exists. Use overwrite=true to replace it.");
             }
             /* Existing track: create a new DTO with the new mix, but don't persist yet.
              * The DB will be updated by the mixing task, but until then we want to maintain
@@ -326,7 +325,7 @@ public class SongController {
             songStorage.writeTrack(newDto);
         }
 
-        executorService.submit(taskFactory.newCreateMixTrackTask(newDto));
+        taskFactory.scheduleCreateMixTrackTask(newDto);
 
         return toMixTrack(newDto);
     }
@@ -336,7 +335,7 @@ public class SongController {
         verifySongExists(songId);
         AudioTrackDTO dto = songStorage.describeMix(songId.value(), mixName);
         if (dto == null) {
-            throw new ErrorResponseException(HttpStatus.NOT_FOUND);
+            throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
         songStorage.deleteTrack(songId.value(), mixName);
         String mediaLocation = dto.getMediaLocation();
@@ -356,8 +355,7 @@ public class SongController {
         AudioTrackDTO dto = songStorage.describePart(songId.value(), part.name());
         if (dto == null) {
             log.error("Part {} for song ID {} not found.", part, songId);
-            // TODO add details to error
-            throw new ErrorResponseException(HttpStatus.BAD_REQUEST);
+            throw new BadRequestException("Part '" + part.name() + "' not found for song '" + songId.value() + "'");
         }
         return dto;
     }

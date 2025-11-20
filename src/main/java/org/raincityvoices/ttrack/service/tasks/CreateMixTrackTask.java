@@ -36,18 +36,31 @@ public class CreateMixTrackTask extends AudioTrackTask {
     }
 
     @Override
-    protected void initialize() {
-        // Override the previous mix info (if any) with the requested mix.
-        mixTrack().setMixInfo(mixInfo);
-        partTracks = mixInfo.parts().stream().map(AudioPart::value).map(this::describeTrackOrThrow).toList();
-        partTracks.forEach(pt -> {
-            Preconditions.checkArgument(pt.hasMedia(), "Track %s/%s has no audio", pt.getSongId(), pt.getId());
-        });
+    protected String getTaskType() {
+        return "CreateMixTrackTask";
+    }
+
+    @Override
+    protected TaskMetadata getTaskMetadata() {
+        return CreateMixTrackMetadata.builder()
+            .mixInfo(mixInfo)
+            .build();
+    }
+
+    @Override
+    protected void doInitialize() {
+        describeTrackOrThrow(trackId());
     }
 
     @Override
     public AudioTrackDTO process() throws Exception {
         log.info("Processing mix track: {}", mixTrack());
+
+        mixTrack().setMixInfo(mixInfo);
+        partTracks = mixInfo.parts().stream().map(AudioPart::value).map(this::describeTrackOrThrow).toList();
+        partTracks.forEach(pt -> {
+            Preconditions.checkArgument(pt.hasMedia(), "Track %s/%s has no audio", pt.getSongId(), pt.getId());
+        });
         
         TarsosStreamAdapter[] adapters = new TarsosStreamAdapter[numParts()];
         try {
@@ -82,3 +95,4 @@ public class CreateMixTrackTask extends AudioTrackTask {
 
     private int numParts() { return track().getParts().size(); }
 }
+

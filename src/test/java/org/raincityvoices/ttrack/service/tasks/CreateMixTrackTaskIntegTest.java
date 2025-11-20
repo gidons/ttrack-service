@@ -1,17 +1,22 @@
-package org.raincityvoices.ttrack.service;
+package org.raincityvoices.ttrack.service.tasks;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Instant;
+
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 import org.raincityvoices.ttrack.service.model.TestData;
+import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
+import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
-import org.raincityvoices.ttrack.service.tasks.AudioTrackTaskFactory;
-import org.raincityvoices.ttrack.service.tasks.CreateMixTrackTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -37,11 +42,14 @@ public class CreateMixTrackTaskIntegTest {
     @Autowired
     private MediaStorage mediaStorage;
 
+    @Autowired
+    private AsyncTaskStorage taskStorage;
+
     @AfterEach
     public void cleanup() {
-        log.info("Cleaning up media for {}/{}...", TestData.SUNSHINE_SONG_ID, TEST_MIX_NAME);
-        mediaStorage.deleteMedia(mediaStorage.mediaLocationFor(new SongId(TestData.SUNSHINE_SONG_ID), TEST_MIX_NAME));
-        log.info("Cleaning up metadata for {}/{}...", TestData.SUNSHINE_SONG_ID, TEST_MIX_NAME);
+        log.info("Cleaning up media for {}...", AudioTrackDTO.fqId(TestData.SUNSHINE_SONG_ID, TEST_MIX_NAME));
+        mediaStorage.deleteMedia(mediaStorage.locationFor(new SongId(TestData.SUNSHINE_SONG_ID), TEST_MIX_NAME));
+        log.info("Cleaning up metadata for {}...", AudioTrackDTO.fqId(TestData.SUNSHINE_SONG_ID, TEST_MIX_NAME));
         songStorage.deleteTrack(TestData.SUNSHINE_SONG_ID, TEST_MIX_NAME);
     }
 
@@ -56,8 +64,16 @@ public class CreateMixTrackTaskIntegTest {
             .speedFactor(0.8)
             .build();
         songStorage.writeTrack(mixTrack);
-        CreateMixTrackTask task = factory.newCreateMixTrackTask(mixTrack);
+        CreateMixTrackTask task = factory.scheduleCreateMixTrackTask(mixTrack);
+        AsyncTaskDTO taskDto = taskStorage.getTask(task.taskId());
+        assertEquals("CreateMixTrackTask", taskDto.getTaskType());
+        assertEquals(AsyncTaskDTO.PENDING, taskDto.getStatus());
         AudioTrackDTO processed = task.call();
         assertNotNull(processed.getMediaLocation());
+        taskDto = taskStorage.getTask(task.taskId());
+        assertEquals(AsyncTaskDTO.SUCCEEDED, taskDto.getStatus());
+        assertThat(taskDto.getStartTime(), Matchers.lessThan(Instant.now()));
+        assertThat(taskDto.getEndTime(), Matchers.lessThan(Instant.now()));
+        assertThat(taskDto.getEndTime(), Matchers.greaterThan(taskDto.getStartTime()));
     }
 }

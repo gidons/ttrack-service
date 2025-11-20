@@ -45,6 +45,15 @@ public class AzureClients {
     }
 
     @Bean
+    public TableClient asyncTasksTableClient() {
+        return new TableClientBuilder()
+            .credential(cliCredential())
+            .endpoint(tables.endpoint)
+            .tableName("AsyncTasks")
+            .buildClient();
+    }
+
+    @Bean
     public BlobContainerClient mediaContainerClient() {
         return new BlobContainerClientBuilder()
             .credential(cliCredential())

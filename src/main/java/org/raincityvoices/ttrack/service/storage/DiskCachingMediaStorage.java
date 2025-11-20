@@ -81,6 +81,10 @@ public class DiskCachingMediaStorage implements MediaStorage {
             }
         }
         
+        public boolean exists() {
+            return remote.exists(mediaLocation);
+        }
+
         public MediaContent getMedia() {
             if (!remote.exists(mediaLocation)) {
                 throw new IllegalArgumentException("No media found at location " + mediaLocation);
@@ -193,6 +197,11 @@ public class DiskCachingMediaStorage implements MediaStorage {
         private File mediaFile(String suffix) {
             return DiskCachingMediaStorage.this.mediaFile(mediaLocation, suffix);
         }
+    }
+
+    @Override
+    public boolean exists(String mediaLocation) {
+        return getClient(mediaLocation).exists();
     }
 
     public MediaContent getMedia(String mediaLocation) {

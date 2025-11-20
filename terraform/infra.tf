@@ -36,3 +36,8 @@ resource "azurerm_storage_table" "songs_table" {
   name               = "Songs"
   storage_account_name = azurerm_storage_account.storage.name
 }
+
+resource "azurerm_storage_table" "async_tasks_table" {
+  name               = "AsyncTasks"
+  storage_account_name = azurerm_storage_account.storage.name
+}

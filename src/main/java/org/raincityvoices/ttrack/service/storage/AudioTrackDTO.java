@@ -65,6 +65,8 @@ public class AudioTrackDTO extends BaseDTO {
     String mediaLocation;
 
     @Transient
+    public String fqId() { return fqId(songId, id); }
+    @Transient
     public boolean isPartTrack() { return parts == null && audioMix == null; }
     @Transient
     public boolean isMixTrack() { return CollectionUtils.isNotEmpty(parts) && audioMix != null; }
@@ -109,4 +111,6 @@ public class AudioTrackDTO extends BaseDTO {
             .parts(track.parts().stream().map(AudioPart::name).toList())
             .build();
     }
+
+    public static String fqId(String songId, String trackId) { return String.format("%s/%s", songId, trackId); }
 }

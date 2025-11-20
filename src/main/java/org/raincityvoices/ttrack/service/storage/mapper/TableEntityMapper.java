@@ -135,7 +135,7 @@ public class TableEntityMapper<E> {
 
         boolean jsonSerialize = false;
         String annotatedType = (propAnnotation != null) ? StringUtils.trim(propAnnotation.type()) : null;
-        if (annotatedType == null) {
+        if (StringUtils.isEmpty(annotatedType)) {
             odataType = null;
         } else if (annotatedType.startsWith("Edm.")) {
             odataType = annotatedType;
