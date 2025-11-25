@@ -7,8 +7,11 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,7 +24,6 @@ import javax.sound.sampled.AudioSystem;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,9 +91,9 @@ public class DiskCachingMediaStorageIntegTest {
     
     @Test
     public void testEndToEnd() throws Exception {
-        AudioInputStream mediaStream = AudioSystem.getAudioInputStream(TEST_WAV_FILE);
-        mediaStream = AudioSystem.getAudioInputStream(TEST_WAV_FILE);
+        InputStream mediaStream = new BufferedInputStream(new FileInputStream(TEST_WAV_FILE));
         byte[] originalBytes = IOUtils.toByteArray(mediaStream);
+        mediaStream = new BufferedInputStream(new FileInputStream(TEST_WAV_FILE));
         FileMetadata metadata = FileMetadata.builder()
             .fileName(FILENAME)
             .build();
@@ -115,14 +117,6 @@ public class DiskCachingMediaStorageIntegTest {
         assertArrayEquals(originalBytes, fetchedBytes);
         fetched.stream().close();
         verifyMetadata(fetched.metadata());
-    }
-
-    @Test
-    @Disabled
-    public void testGetMetadata() {
-        FileMetadata metadata = mediaStorage.getMediaMetadata(LOCATION);
-        System.out.println("Metadata: " + metadata);
-        verifyMetadata(metadata);
     }
 
     private void verifyMetadata(FileMetadata metadata) {

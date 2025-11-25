@@ -42,6 +42,17 @@ import lombok.extern.slf4j.Slf4j;
 @Accessors(fluent = true)
 public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
 
+    public enum ActionOnConflict {
+        /** Wait for the other task to complete and then run this one. */
+        WAIT,
+        /** Cancel the other task and start this one. */
+        PREEMPT,
+        /** End this task as SUCCEEDED without taking action. */
+        SKIP,
+        /** End this task as FAILED without taking action. */
+        FAIL
+    }
+
     private static final ObjectMapper MAPPER = JsonUtils.newMapper();
     
     @Getter(AccessLevel.PUBLIC)
@@ -49,6 +60,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
     private final String songId;
     private final String trackId;
     private final AudioDebugger.Settings debugSettings;
+    private final AudioTrackTaskFactory factory;
     private final SongStorage songStorage;
     private final MediaStorage mediaStorage;
     private final AsyncTaskStorage asyncTaskStorage;
@@ -70,6 +82,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
         this.taskId = UUID.randomUUID().toString();
         this.songId = songId;
         this.trackId = trackId;
+        this.factory = factory;
         this.songStorage = factory.getSongStorage();
         this.mediaStorage = factory.getMediaStorage();
         this.fileManager = factory.getFileManager();
@@ -94,13 +107,22 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
      * @throws Exception
      */
     public void initialize() throws Exception {
+        track = describeTrackOrThrow(trackId);
+        if (track.getCurrentTaskId() != null) {
+            log.info("Track {} is currently held by task {}", trackFqId(), track.getCurrentTaskId());
+            while (track.getCurrentTaskId() != null) {
+                log.debug("Waiting for other task to release the track...");
+                Thread.sleep(1000);
+                track = describeTrackOrThrow(trackId);
+            }
+        }
         doInitialize();
         createAsyncTaskRecord();
     }
 
     @Override
     public AudioTrackDTO call() throws Exception {
-        log.info("Starting task {} for track {}", this, trackFqId());
+        log.info("Starting task {}", this);
         try {
             updateAsyncTaskRunning();
         } catch (Exception e) {
@@ -137,9 +159,11 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
 
         asyncTask = AsyncTaskDTO.builder()
                 .taskId(taskId)
+                .songId(songId)
+                .trackId(trackId)
                 .status(AsyncTaskDTO.PENDING)
                 .taskType(getTaskType())
-                .startTime(Instant.now(clock))
+                .scheduled(Instant.now(clock))
                 .metadata(metadata)
                 .build();
 
@@ -151,11 +175,16 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
      * Update async task status to RUNNING after initialization.
      */
     private void updateAsyncTaskRunning() {
-        if (asyncTask != null) {
-            asyncTask.setStatus(AsyncTaskDTO.RUNNING);
-            asyncTaskStorage.updateTask(asyncTask);
-            log.info("Updated async task to RUNNING: {}", asyncTask.getTaskId());
+        if (asyncTask == null) {
+            asyncTask = asyncTaskStorage().getTask(taskId);
+            if (asyncTask == null) {
+                throw new RuntimeException("Async task with ID " + taskId + " not found in DB.");
+            }
         }
+        asyncTask.setStatus(AsyncTaskDTO.RUNNING);
+        asyncTask.setStartTime(clock().instant());
+        asyncTaskStorage.updateTask(asyncTask);
+        log.info("Updated async task to RUNNING: {}", asyncTask.getTaskId());
     }
 
     /**
@@ -164,7 +193,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
     private void updateAsyncTaskSucceeded() {
         if (asyncTask != null) {
             asyncTask.setStatus(AsyncTaskDTO.SUCCEEDED);
-            asyncTask.setEndTime(Instant.now(clock));
+            asyncTask.setEndTime(clock().instant());
             asyncTaskStorage.updateTask(asyncTask);
             log.info("Updated async task to SUCCEEDED: {}", asyncTask.getTaskId());
         }

@@ -4,6 +4,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
 
+import org.raincityvoices.ttrack.service.exceptions.ConflictException;
+
 public interface SongStorage {
 
     /** @return The metadata for all songs in the system (empty list if none.) */ 
@@ -38,5 +40,13 @@ public interface SongStorage {
         return describeTrack(songId, mixName);
     }
     boolean deleteTrack(String songId, String trackId);
+    /**
+     * Create or update the track metadata.
+     * If an entity with the same song and track IDs doesn't exist, write this one.
+     * If there is an existing entity, replace it entirely with this one, but only if the ETag hasn't changed.
+     * @return the updated DTO, including the new ETag.
+     * @throws ConflictException if the input ETag doesn't match the existing one or if the input ETag was empty
+     * but an entity already exists for the same track.
+     */
     AudioTrackDTO writeTrack(AudioTrackDTO trackDto);
 }

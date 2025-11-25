@@ -11,6 +11,7 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 
+import com.azure.core.util.ETag;
 import com.azure.data.tables.implementation.TablesConstants;
 import com.azure.data.tables.models.TableEntity;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -117,6 +118,8 @@ public class TableEntityMapper<E> {
             name = TablesConstants.TIMESTAMP_KEY;
         } else if (propAnnotation != null && !propAnnotation.value().isBlank()) {
             name = propAnnotation.value();
+        } else if (getter.getReturnType().equals(ETag.class) || getter.getAnnotation(org.raincityvoices.ttrack.service.storage.mapper.ETag.class) != null) {
+            name = TablesConstants.ODATA_ETAG_KEY;
         } else {
             // This allows a property named "parititionKey" or "rowKey" to be used as PK or RK.
             // It also conforms to the apparent standard PascalCase convention for Tables properties.
@@ -130,6 +133,11 @@ public class TableEntityMapper<E> {
         if (name.equals(TablesConstants.TIMESTAMP_KEY)) {
             if (!DateHelper.SUPPORTED_TYPES.contains(getter.getReturnType())) {
                 throw new IllegalArgumentException("Property used for " + name + " is not a supported date/time type.");
+            }
+        }
+        if (name.equals(TablesConstants.ODATA_ETAG_KEY)) {
+            if (getter.getReturnType() != ETag.class && getter.getReturnType() != String.class) {
+                throw new IllegalArgumentException("Property used for ETag must be a String or ETag.");
             }
         }
 
@@ -149,6 +157,8 @@ public class TableEntityMapper<E> {
         PropertyHandler<E> baseHandler = new BeanUtilsPropertyHandler<>(name, descriptor, odataType);
         if (name.equals(TablesConstants.TIMESTAMP_KEY)) {
             return new TimestampPropertyHandlerDecorator<>(baseHandler, getter.getReturnType());
+        } else if (getter.getReturnType().equals(ETag.class)) {
+            return new ETagPropertyHandlerDecorator(baseHandler);
         } else if (jsonSerialize) {
             return new JsonPropertyHandlerDecorator<>(baseHandler, TypeFactory.defaultInstance().constructType(getter.getGenericReturnType()));
         } else {

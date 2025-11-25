@@ -9,9 +9,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "_type", include = JsonTypeInfo.As.PROPERTY)
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = ProcessUploadedTrackMetadata.class, name = "ProcessUploadedTrack"),
+    @JsonSubTypes.Type(value = ProcessUploadedPartMetadata.class, name = "ProcessUploadedTrack"),
     @JsonSubTypes.Type(value = UploadPartTrackMetadata.class, name = "UploadPartTrack"),
-    @JsonSubTypes.Type(value = CreateMixTrackMetadata.class, name = "CreateMixTrack")
+    @JsonSubTypes.Type(value = CreateMixTrackMetadata.class, name = "CreateMixTrack"),
+    @JsonSubTypes.Type(value = RefreshMixTrackTask.Metadata.class, name = "RefreshMixTrack")
 })
 public interface TaskMetadata {
 }

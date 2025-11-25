@@ -1,9 +1,11 @@
 package org.raincityvoices.ttrack.service.tasks;
 
+import java.io.IOException;
 import java.util.List;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.raincityvoices.ttrack.service.SongController;
 import org.raincityvoices.ttrack.service.api.MixInfo;
@@ -19,16 +21,13 @@ import com.azure.cosmos.implementation.guava25.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class CreateMixTrackTask extends AudioTrackTask {
+public class CreateMixTrackTask extends MixTrackTaskBase {
     private final MixInfo mixInfo;
-    private List<AudioTrackDTO> partTracks;
 
     CreateMixTrackTask(AudioTrackDTO mixTrack, AudioTrackTaskFactory factory) {
         super(mixTrack, factory);
         this.mixInfo = SongController.toMixTrack(mixTrack).mixInfo();
     }
-
-    private final AudioTrackDTO mixTrack() { return track(); }
 
     @Override
     public String toString() {
@@ -37,7 +36,7 @@ public class CreateMixTrackTask extends AudioTrackTask {
 
     @Override
     protected String getTaskType() {
-        return "CreateMixTrackTask";
+        return "CreateMixTrack";
     }
 
     @Override
@@ -57,42 +56,8 @@ public class CreateMixTrackTask extends AudioTrackTask {
         log.info("Processing mix track: {}", mixTrack());
 
         mixTrack().setMixInfo(mixInfo);
-        partTracks = mixInfo.parts().stream().map(AudioPart::value).map(this::describeTrackOrThrow).toList();
-        partTracks.forEach(pt -> {
-            Preconditions.checkArgument(pt.hasMedia(), "Track %s/%s has no audio", pt.getSongId(), pt.getId());
-        });
         
-        TarsosStreamAdapter[] adapters = new TarsosStreamAdapter[numParts()];
-        try {
-            AudioInputStream[] inputStreams = new AudioInputStream[numParts()];
-            boolean needAudioMod = (mixTrack().getPitchShift() != 0 || mixTrack().getSpeedFactor() != 1.0);
-            for (int i = 0; i < numParts(); ++i) {
-                AudioTrackDTO partTrack = partTracks.get(i);
-                log.info("Reading media for part {} from {}", partTrack.getId(), partTrack.getMediaLocation());
-                MediaContent content = mediaStorage().getMedia(partTrack.getMediaLocation());
-                inputStreams[i] = AudioSystem.getAudioInputStream(content.stream());
-                if (needAudioMod) {
-                    log.info("Applying pitch shift {}, speed factor {}", mixTrack().getPitchShift(), mixTrack().getSpeedFactor());
-                    adapters[i] = new TarsosStreamAdapter(
-                        TarsosUtils.getPitchAndSpeedDispatcher(inputStreams[i], mixTrack().getPitchShift(), mixTrack().getSpeedFactor()), debugSettings());
-                    inputStreams[i] = adapters[i].getAudioInputStream();
-                }
-            }
-
-            AudioMixingStream mixingStream = AudioMixingStream.create(inputStreams, mixTrack().getAudioMix());
-            AudioTrackDTO uploaded = uploadStream(mixingStream, null);
-            log.info("Uploaded mixed audio to {}", uploaded.getMediaLocation());
-            return uploaded;
-        } finally {
-            for (TarsosStreamAdapter adapter : adapters) {
-                if (adapter != null) {
-                    // closing the adapter also closes the stream
-                    adapter.close();
-                }
-            }
-        }
+        return performMix();
     }
-
-    private int numParts() { return track().getParts().size(); }
 }
 

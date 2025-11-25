@@ -8,4 +8,8 @@ import lombok.Data;
 public class BaseDTO {
 
     ETag eTag;
+
+    public boolean hasETag() {
+        return eTag != null && !eTag.toString().isEmpty();
+    }
 }

@@ -13,11 +13,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-public class ProcessUploadedTrackMetadata implements TaskMetadata {
+public class ProcessUploadedPartMetadata implements TaskMetadata {
     
     /** The media location (blob path) of the uploaded file. */
     private String mediaLocation;
-    
-    /** The original file name provided by the uploader. */
-    private String originalFileName;
 }

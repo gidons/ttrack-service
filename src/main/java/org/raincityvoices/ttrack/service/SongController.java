@@ -227,7 +227,7 @@ public class SongController {
             throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
         if (!dto.hasMedia()) {
-            log.error("Track {} has no media available.", dto.fqId());
+            log.error("Track {} has no media available.", dto.getFqId());
             throw new NotFoundException("Mix '" + mixName + "' has no media available");
         }
         SongDTO songDto = songStorage.describeSong(songId.value());

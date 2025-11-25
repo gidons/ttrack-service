@@ -5,7 +5,6 @@ import org.raincityvoices.ttrack.service.util.Temp;
 
 import com.google.common.base.Preconditions;
 
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -24,7 +23,7 @@ public class UploadPartTrackTask extends AudioTrackTask {
 
     @Override
     protected String getTaskType() {
-        return "UploadPartTrackTask";
+        return "UploadPartTrack";
     }
 
     @Override

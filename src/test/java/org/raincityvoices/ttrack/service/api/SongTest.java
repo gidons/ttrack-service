@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service;
+package org.raincityvoices.ttrack.service.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

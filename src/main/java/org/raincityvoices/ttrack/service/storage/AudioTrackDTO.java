@@ -63,9 +63,11 @@ public class AudioTrackDTO extends BaseDTO {
     Instant updated;
     /** The location of the media (used by MediaStorage). */
     String mediaLocation;
+    /** The ID of the current task writing to the track, if any. */
+    String currentTaskId;
 
     @Transient
-    public String fqId() { return fqId(songId, id); }
+    public String getFqId() { return fqId(songId, id); }
     @Transient
     public boolean isPartTrack() { return parts == null && audioMix == null; }
     @Transient

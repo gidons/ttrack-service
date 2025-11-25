@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service;
+package org.raincityvoices.ttrack.service.storage;
 
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.storage.FileMetadata;

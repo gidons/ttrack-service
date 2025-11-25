@@ -34,6 +34,7 @@ public class AsyncTaskDTO extends BaseDTO {
     public static final String SUCCEEDED = "SUCCEEDED";
     public static final String FAILED = "FAILED";
     public static final String TIMEDOUT = "TIMEDOUT";
+    public static final String CANCELED = "CANCELED";
 
     /** Partition key: unique and opaque. */
     @Getter(onMethod=@__(@PartitionKey))
@@ -48,6 +49,7 @@ public class AsyncTaskDTO extends BaseDTO {
     String taskType;
     String songId;
     String trackId;
+    Instant scheduled;
     Instant startTime;
     Instant endTime;
     

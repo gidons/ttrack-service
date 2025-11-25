@@ -22,8 +22,8 @@ public class AzureTablesAsyncTaskStorage implements AsyncTaskStorage {
     private final TableClient tableClient;
     private final TableEntityMapper<AsyncTaskDTO> taskMapper = new TableEntityMapper<>(AsyncTaskDTO.class);
     
-    public AzureTablesAsyncTaskStorage(@Qualifier("asyncTasksTableClient") TableClient asyncTasksClient) {
-        this.tableClient = asyncTasksClient;
+    public AzureTablesAsyncTaskStorage(TableClient asyncTasksTableClient) {
+        this.tableClient = asyncTasksTableClient;
     }
     
     @Override

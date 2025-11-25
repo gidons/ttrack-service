@@ -1,7 +1,11 @@
 package org.raincityvoices.ttrack.service.tasks;
 
+import java.io.IOException;
+import java.util.List;
+
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.FileMetadata;
@@ -13,31 +17,29 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * An aysnchronous task that updates the metadata for an uploaded audio track based on
- * the audio contents, including the duration (in the table) and content type (on the blob).
- * This allows us to upload content directly to the blob without first saving it to a
- * local file.
+ * the audio contents, and starts tasks to recreate any mixes that involve that part.
  */
 @Slf4j
-public class ProcessUploadedTrackTask extends AudioTrackTask {
+public class ProcessUploadedPartTask extends AudioTrackTask {
 
     private final String mediaLocation;
 
-    ProcessUploadedTrackTask(AudioTrackDTO track, AudioTrackTaskFactory factory) {
+    ProcessUploadedPartTask(AudioTrackDTO track, AudioTrackTaskFactory factory) {
         super(track, factory);
         Preconditions.checkArgument(track.hasMedia());
+        Preconditions.checkArgument(track.isPartTrack());
         this.mediaLocation = track.getMediaLocation();
     }
 
     @Override
     protected String getTaskType() {
-        return "ProcessUploadedTrackTask";
+        return "ProcessUploadedPart";
     }
 
     @Override
     protected TaskMetadata getTaskMetadata() {
-        return ProcessUploadedTrackMetadata.builder()
+        return ProcessUploadedPartMetadata.builder()
             .mediaLocation(mediaLocation)
-            .originalFileName(null)  // Not available at task creation
             .build();
     }
 
@@ -53,11 +55,27 @@ public class ProcessUploadedTrackTask extends AudioTrackTask {
         if (!mediaLocation.equals(track().getMediaLocation())) {
             log.warn("Current track media location ({}) is different from what it was at task creation ({}). Will use current value.");
         }
-        MediaContent media = mediaStorage().getMedia(track().getMediaLocation());
-        AudioFileFormat format = AudioSystem.getAudioFileFormat(media.stream());
-        FileMetadata metadata = FileMetadata.fromAudioFileFormat(format);
-        track().updateFileMetadata(metadata);
-        songStorage().writeTrack(track());
+        updateMetadata();
+        recreateMixes();
         return track();
+    }
+
+    private void recreateMixes() {
+        final String partName = trackId();
+        List<AudioTrackDTO> tracksToRecreate = songStorage().listMixesForSong(songId())
+            .stream()
+            .filter(mt -> mt.getParts().contains(partName))
+            .toList();
+        log.info("Need to recreate {} tracks containing the new {} part.", tracksToRecreate.size(), partName);
+        tracksToRecreate.forEach(t -> {
+            log.debug("Launching task to recreate mix track {}", t.getId());
+            factory().scheduleCreateMixTrackTask(t);
+        });
+    }
+
+    private void updateMetadata() throws UnsupportedAudioFileException, IOException {
+        MediaContent media = mediaStorage().getMedia(track().getMediaLocation());
+        track().updateFileMetadata(media.metadata());
+        songStorage().writeTrack(track());
     }
 }

@@ -4,16 +4,23 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Random;
 
+import org.raincityvoices.ttrack.service.exceptions.ConflictException;
+import org.raincityvoices.ttrack.service.storage.mapper.BaseDTO;
 import org.raincityvoices.ttrack.service.storage.mapper.TableEntityMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
+import com.azure.core.http.HttpHeaderName;
 import com.azure.core.http.rest.PagedIterable;
+import com.azure.core.http.rest.Response;
+import com.azure.core.util.ETag;
 import com.azure.cosmos.implementation.guava25.base.Preconditions;
 import com.azure.data.tables.TableClient;
 import com.azure.data.tables.models.ListEntitiesOptions;
 import com.azure.data.tables.models.TableEntity;
+import com.azure.data.tables.models.TableEntityUpdateMode;
 import com.azure.data.tables.models.TableServiceException;
+import com.microsoft.applicationinsights.core.dependencies.http.client.methods.HttpHead;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -67,13 +74,7 @@ public class AzureTablesSongStorage implements SongStorage {
         if (songDto.getId().isEmpty()) {
             songDto.setId(createIdForSong(songDto));
         }
-        try {
-            TableEntity entity = songMapper.toTableEntity(songDto);
-            log.debug("Table entity: {}", entity.getProperties());
-            tableClient.upsertEntity(entity);
-        } catch(Exception e) {
-            throw new RuntimeException("Failed to write song " + songDto.getId() + " to table.", e);
-        }
+        writeEntity(songDto, songMapper);
         return songDto.getId();
     }
 
@@ -127,14 +128,37 @@ public class AzureTablesSongStorage implements SongStorage {
         if (trackDto.getCreated() == null) {
             trackDto.setCreated(clock.instant());
         }
-        try {
-            TableEntity entity = trackMapper.toTableEntity(trackDto);
-            log.debug("Table entity: {}", entity.getProperties());
-            tableClient.upsertEntity(entity);
-        } catch(Exception e) {
-            throw new RuntimeException("Failed to write track " + trackDto.getId() + " to table.", e);
-        }
+        writeEntity(trackDto, trackMapper);
         return trackDto;
+    }
+
+    private <T extends BaseDTO> void writeEntity(T dto, TableEntityMapper<T> mapper) {
+        TableEntity entity;
+        try {
+            entity = mapper.toTableEntity(dto);
+        } catch(Exception e) {
+            throw new RuntimeException("Failed to convert " + dto + " to Tables entity.", e);
+        }
+        String fullKey = entity.getPartitionKey() + "/" + entity.getRowKey();
+        try {
+            log.debug("Table entity: {}", entity.getProperties());
+            final Response<Void> response;
+            if (dto.hasETag()) {
+                response = tableClient.updateEntityWithResponse(entity, TableEntityUpdateMode.REPLACE, true, null, null);
+            } else {
+                response = tableClient.createEntityWithResponse(entity, null, null);
+            }
+            log.debug("ETag header: '{}'", response.getHeaders().getValue(HttpHeaderName.ETAG));
+            dto.setETag(new ETag(response.getHeaders().getValue(HttpHeaderName.ETAG) + '"'));
+        } catch(TableServiceException e) {
+            if (e.getResponse().getStatusCode() == 409) {
+                throw new ConflictException("Entity " + fullKey + " has been updated since last read.");
+            }
+            throw new RuntimeException("Failed to write " + fullKey + " to table.", e);
+        } catch(Exception e) {
+            throw new RuntimeException("Failed to write " + fullKey + " to table.", e);
+        }
+
     }
 
     @Override

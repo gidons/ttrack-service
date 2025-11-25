@@ -33,8 +33,8 @@ public class AudioTrackTaskFactory {
     // TODO [SCRUM-27] find a clean and useful way to inject debug settings
     private final AudioDebugger.Settings debugSettings = AudioDebugger.Settings.NONE;
 
-    public ProcessUploadedTrackTask scheduleProcessUploadedTrackTask(AudioTrackDTO track) {
-        return schedule(new ProcessUploadedTrackTask(track, this));
+    public ProcessUploadedPartTask scheduleProcessUploadedTrackTask(AudioTrackDTO track) {
+        return schedule(new ProcessUploadedPartTask(track, this));
     }
 
     public UploadPartTrackTask scheduleUploadPartTrackTask(AudioTrackDTO track, Temp.File audioTempFile, String originalFileName) {

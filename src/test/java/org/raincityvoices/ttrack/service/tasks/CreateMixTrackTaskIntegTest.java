@@ -66,7 +66,7 @@ public class CreateMixTrackTaskIntegTest {
         songStorage.writeTrack(mixTrack);
         CreateMixTrackTask task = factory.scheduleCreateMixTrackTask(mixTrack);
         AsyncTaskDTO taskDto = taskStorage.getTask(task.taskId());
-        assertEquals("CreateMixTrackTask", taskDto.getTaskType());
+        assertEquals("CreateMixTrack", taskDto.getTaskType());
         assertEquals(AsyncTaskDTO.PENDING, taskDto.getStatus());
         AudioTrackDTO processed = task.call();
         assertNotNull(processed.getMediaLocation());

@@ -14,6 +14,9 @@ public interface MediaStorage {
      */
     boolean deleteMedia(String mediaLocation);
     default String locationFor(SongId songId, String trackId) {
-        return String.format("%s/%s", songId.value(), trackId);
+        return locationFor(songId.value(), trackId);
+    }
+    default String locationFor(String songId, String trackId) {
+        return String.format("%s/%s", songId, trackId);
     }
 }

@@ -24,6 +24,7 @@ import lombok.extern.jackson.Jacksonized;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PartTrack extends AudioTrack {
 
+    @JsonProperty
     private final AudioPart part;
 
     public String trackId() { return part.name(); }

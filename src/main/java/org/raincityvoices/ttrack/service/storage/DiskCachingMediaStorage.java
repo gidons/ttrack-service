@@ -187,7 +187,9 @@ public class DiskCachingMediaStorage implements MediaStorage {
 
         private FileMetadata inferMediaMetadata(File file) {
             try {
-                return FileMetadata.fromAudioFileFormat(fileManager.getAudioFileFormat(file));
+                FileMetadata inferred = FileMetadata.fromAudioFileFormat(fileManager.getAudioFileFormat(file));
+                log.debug("Inferred metadata: {}", metadata);
+                return inferred;
             } catch (IOException | UnsupportedAudioFileException e) {
                 log.error("Unable to infer metadata from media file {}", file);
                 return FileMetadata.UNKNOWN;
