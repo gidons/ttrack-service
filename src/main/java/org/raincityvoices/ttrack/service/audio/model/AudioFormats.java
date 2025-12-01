@@ -10,6 +10,8 @@ public class AudioFormats {
 
     public static final String WAV_TYPE = "audio/wav";
     public static final String WAV_EXT = ".wav";
+    public static final String MP3_TYPE = "audio/mpeg";
+    public static final String MP3_EXT = ".mp3";
 
     public static final AudioFormat MONO_PCM_44_1KHZ = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 1, 2, 44100, false);
     public static final AudioFormat MONO_PCM_48KHZ = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 48000, 16, 1, 2, 48000, false);

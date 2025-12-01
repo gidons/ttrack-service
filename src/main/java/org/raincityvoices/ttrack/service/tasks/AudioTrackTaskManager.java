@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Component
 @Getter(AccessLevel.PACKAGE)
-public class AudioTrackTaskFactory {
+public class AudioTrackTaskManager {
 
     private final SongStorage songStorage;
     private final MediaStorage mediaStorage;
@@ -53,5 +53,5 @@ public class AudioTrackTaskFactory {
         }
         executor.submit(task);
         return task;
-    } 
+    }
 }

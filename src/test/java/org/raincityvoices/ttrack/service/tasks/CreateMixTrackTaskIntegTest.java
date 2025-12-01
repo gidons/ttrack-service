@@ -2,12 +2,14 @@ package org.raincityvoices.ttrack.service.tasks;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Instant;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
@@ -17,6 +19,7 @@ import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
+import org.raincityvoices.ttrack.service.util.Temp;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -34,7 +37,7 @@ public class CreateMixTrackTaskIntegTest {
     private static final String TEST_MIX_NAME = "test mix";
 
     @Autowired
-    private AudioTrackTaskFactory factory;
+    private AudioTrackTaskManager manager;
 
     @Autowired
     private SongStorage songStorage;
@@ -44,6 +47,11 @@ public class CreateMixTrackTaskIntegTest {
 
     @Autowired
     private AsyncTaskStorage taskStorage;
+
+    @BeforeAll
+    public static void init() {
+        Temp.KEEP_FILES = true;
+    }
 
     @AfterEach
     public void cleanup() {
@@ -64,10 +72,11 @@ public class CreateMixTrackTaskIntegTest {
             .speedFactor(0.8)
             .build();
         songStorage.writeTrack(mixTrack);
-        CreateMixTrackTask task = factory.scheduleCreateMixTrackTask(mixTrack);
+        CreateMixTrackTask task = new CreateMixTrackTask(mixTrack, manager);
+        task.initialize();
         AsyncTaskDTO taskDto = taskStorage.getTask(task.taskId());
         assertEquals("CreateMixTrack", taskDto.getTaskType());
-        assertEquals(AsyncTaskDTO.PENDING, taskDto.getStatus());
+        assertEquals(AsyncTaskDTO.SCHEDULED, taskDto.getStatus());
         AudioTrackDTO processed = task.call();
         assertNotNull(processed.getMediaLocation());
         taskDto = taskStorage.getTask(task.taskId());
@@ -75,5 +84,11 @@ public class CreateMixTrackTaskIntegTest {
         assertThat(taskDto.getStartTime(), Matchers.lessThan(Instant.now()));
         assertThat(taskDto.getEndTime(), Matchers.lessThan(Instant.now()));
         assertThat(taskDto.getEndTime(), Matchers.greaterThan(taskDto.getStartTime()));
+
+        mixTrack = songStorage.describeMix(TestData.SUNSHINE_SONG_ID, TEST_MIX_NAME);
+        AudioTrackDTO partTrack = songStorage.describePart(TestData.SUNSHINE_SONG_ID, TestData.LEAD.name());
+        assertTrue(mixTrack.hasMedia());
+        assertEquals(partTrack.getDurationSec() * 1 / mixTrack.getSpeedFactor(), mixTrack.getDurationSec(), 1.0);
+        assertEquals(null, mixTrack.getCurrentTaskId());
     }
 }

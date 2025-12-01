@@ -5,6 +5,7 @@ import javax.sound.sampled.AudioFileFormat.Type;
 
 import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
+import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.http.ContentDisposition;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,6 +14,7 @@ import com.azure.storage.blob.models.BlobDownloadHeaders;
 import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.BlobProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -20,7 +22,9 @@ import lombok.Getter;
 import lombok.Value;
 import lombok.With;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Value
 @Builder
 @Accessors(fluent = true)
@@ -62,10 +66,28 @@ public class FileMetadata {
 
     public static FileMetadata fromAudioFileFormat(AudioFileFormat format) {
         // NOTE: this doesn't set the filename.
+        log.info("Inferring metadata from AudioFileFormat: {}", JsonUtils.toJson(format));
+        final float durationSec;
+        final String contentType;
+        switch(format.getType().toString()) {
+            case "WAVE":
+                contentType = AudioFormats.WAV_TYPE;
+                durationSec = format.getFrameLength() / format.getFormat().getFrameRate();
+                break;
+            case "MP3":
+                contentType = AudioFormats.MP3_TYPE;
+                // Not sure why, but the frameLength in MP3 seems to count separate frames per channel
+                durationSec = format.getFrameLength() / (format.getFormat().getFrameRate() * format.getFormat().getChannels());
+                break;
+            default:
+                log.warn("Unable to infer audio metadata for format type {}", format.getType());
+                contentType = MimeTypeUtils.APPLICATION_OCTET_STREAM_VALUE;
+                durationSec = 0.0f;
+        }
         return FileMetadata.builder()
                 .lengthBytes(format.getByteLength())
-                .contentType(Type.WAVE.equals(format.getType()) ? AudioFormats.WAV_TYPE : MimeTypeUtils.APPLICATION_OCTET_STREAM_VALUE)
-                .durationSec(format.getFrameLength() / format.getFormat().getFrameRate())
+                .contentType(contentType)
+                .durationSec(durationSec)
                 .build();
     }
 

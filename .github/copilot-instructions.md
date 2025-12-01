@@ -29,7 +29,7 @@ This file captures concise, concrete knowledge an AI coding assistant needs to b
 4. Important patterns & conventions
    - DTOs vs API models: persistence objects live under `service.storage.*` (e.g., `AudioTrackDTO`, `SongDTO`) and convert to API models under `service.api.*`.
    - Audio files are streamed via `MediaContent` wrappers and passed to `FileManager` for format detection and I/O.
-   - Long-running tasks (more than a second or so) are executed asynchronously as an instance of `AudioTrackTask`, which is created by the singleton `AudioTrackTaskFactory`.
+   - Long-running tasks (more than a second or so) are executed asynchronously as an instance of `AudioTrackTask`, which is created by the singleton `AudioTrackTaskManager`.
          Keep thread-safety and blocking IO in mind when editing.
    - Audio parts are represented by `AudioPart` (extends `StringId`). Each part should be a mono channel.
 

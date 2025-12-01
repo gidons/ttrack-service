@@ -3,12 +3,9 @@ package org.raincityvoices.ttrack.service.tasks;
 import java.io.IOException;
 import java.util.List;
 
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
-import org.raincityvoices.ttrack.service.storage.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.MediaContent;
 
 import com.google.common.base.Preconditions;
@@ -24,7 +21,7 @@ public class ProcessUploadedPartTask extends AudioTrackTask {
 
     private final String mediaLocation;
 
-    ProcessUploadedPartTask(AudioTrackDTO track, AudioTrackTaskFactory factory) {
+    ProcessUploadedPartTask(AudioTrackDTO track, AudioTrackTaskManager factory) {
         super(track, factory);
         Preconditions.checkArgument(track.hasMedia());
         Preconditions.checkArgument(track.isPartTrack());
@@ -69,7 +66,7 @@ public class ProcessUploadedPartTask extends AudioTrackTask {
         log.info("Need to recreate {} tracks containing the new {} part.", tracksToRecreate.size(), partName);
         tracksToRecreate.forEach(t -> {
             log.debug("Launching task to recreate mix track {}", t.getId());
-            factory().scheduleCreateMixTrackTask(t);
+            manager().scheduleCreateMixTrackTask(t);
         });
     }
 

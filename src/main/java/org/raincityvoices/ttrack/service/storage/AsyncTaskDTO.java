@@ -2,7 +2,6 @@ package org.raincityvoices.ttrack.service.storage;
 
 import java.time.Instant;
 
-import org.raincityvoices.ttrack.service.storage.mapper.BaseDTO;
 import org.raincityvoices.ttrack.service.storage.mapper.PartitionKey;
 import org.raincityvoices.ttrack.service.storage.mapper.Property;
 import org.raincityvoices.ttrack.service.storage.mapper.Timestamp;
@@ -29,11 +28,21 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 public class AsyncTaskDTO extends BaseDTO {
     
+    /** The task has been created and is waiting to be picked up for execution. */
+    public static final String SCHEDULED = "SCHEDULED";
+    /** The task was picked up and is waiting to lock the track. */
     public static final String PENDING = "PENDING";
+    /** The task owns the track and is actively processing. */
     public static final String RUNNING = "RUNNING";
+    /** The task has completed successfully. */
     public static final String SUCCEEDED = "SUCCEEDED";
+    /** The task has aborted with an error. */
     public static final String FAILED = "FAILED";
+    /** The task has aborted after timing out. */
     public static final String TIMEDOUT = "TIMEDOUT";
+    /** Someone has requested that the task be canceled. */
+    public static final String CANCELING = "CANCELING";
+    /** The task has aborted due to requested cancelation. */
     public static final String CANCELED = "CANCELED";
 
     /** Partition key: unique and opaque. */

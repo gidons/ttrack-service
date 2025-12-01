@@ -1,6 +1,7 @@
 package org.raincityvoices.ttrack.service.model;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -18,6 +19,9 @@ public class TestData {
     public static final String SUNSHINE_SONG_ID = "60923a30";
 
     public static final String TEST_SONG_ID = "fedcba09";
+
+    public static final File SUNSHINE_LEAD_WAV = new File("src/test/resources/sunshine-lead.wav");
+    public static final File SUNSHINE_LEAD_MP3 = new File("src/test/resources/sunshine-lead.mp3");
 
     public static final AudioPart LEAD = new AudioPart("Lead");
     public static final AudioPart BASS = new AudioPart("Bass");

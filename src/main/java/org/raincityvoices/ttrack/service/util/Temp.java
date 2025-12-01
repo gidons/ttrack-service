@@ -7,15 +7,19 @@ import org.apache.commons.io.FileUtils;
 
 public class Temp {
 
+    public static boolean KEEP_FILES = false;
+
     public static class File extends java.io.File implements Closeable {
         private boolean owned = true;
         private File(String path) {
             super(path);
-            super.deleteOnExit();
+            if (!KEEP_FILES) {
+                super.deleteOnExit();
+            }
         }
         @Override
         public void close() throws IOException {
-            if (owned) {
+            if (owned && !KEEP_FILES) {
                 FileUtils.deleteQuietly(this);
             }
         }

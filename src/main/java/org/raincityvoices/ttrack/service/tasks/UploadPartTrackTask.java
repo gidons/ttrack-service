@@ -13,7 +13,7 @@ public class UploadPartTrackTask extends AudioTrackTask {
     private final Temp.File audioTempFile;
     private final String originalFileName;
 
-    UploadPartTrackTask(AudioTrackDTO track, Temp.File audioTempFile, String originalFileName, AudioTrackTaskFactory factory) {
+    UploadPartTrackTask(AudioTrackDTO track, Temp.File audioTempFile, String originalFileName, AudioTrackTaskManager factory) {
         super(track, factory);
         Preconditions.checkNotNull(audioTempFile);
         Preconditions.checkArgument(audioTempFile.isFile());

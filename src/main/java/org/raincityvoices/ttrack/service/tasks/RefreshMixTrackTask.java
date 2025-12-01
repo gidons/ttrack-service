@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RefreshMixTrackTask extends MixTrackTaskBase {
 
-    public RefreshMixTrackTask(AudioTrackDTO track, AudioTrackTaskFactory factory) {
+    public RefreshMixTrackTask(AudioTrackDTO track, AudioTrackTaskManager factory) {
         super(track, factory);
     }
 

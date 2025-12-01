@@ -25,7 +25,7 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
 
     private List<AudioTrackDTO> partTracks;
 
-    public MixTrackTaskBase(AudioTrackDTO track, AudioTrackTaskFactory factory) {
+    public MixTrackTaskBase(AudioTrackDTO track, AudioTrackTaskManager factory) {
         super(track, factory);
     }
 

@@ -2,10 +2,8 @@ package org.raincityvoices.ttrack.service.tasks;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -13,7 +11,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +31,6 @@ import org.raincityvoices.ttrack.service.storage.MediaContent;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;
-import org.raincityvoices.ttrack.service.util.JsonUtils;
 
 @ExtendWith(MockitoExtension.class)
 public class ProcessUploadedPartTaskTest {
@@ -53,7 +49,7 @@ public class ProcessUploadedPartTaskTest {
     @Mock
     private Ffmpeg ffmpeg;
     @Mock
-    private AudioTrackTaskFactory taskFactory;
+    private AudioTrackTaskManager taskManager;
 
     private ProcessUploadedPartTask task;
     private AudioTrackDTO track;
@@ -63,14 +59,14 @@ public class ProcessUploadedPartTaskTest {
 
     @BeforeEach
     public void setup() {
-        when(taskFactory.getSongStorage()).thenReturn(songStorage);
-        when(taskFactory.getMediaStorage()).thenReturn(mediaStorage);
-        when(taskFactory.getAsyncTaskStorage()).thenReturn(taskStorage);
-        when(taskFactory.getFileManager()).thenReturn(fileManager);
-        when(taskFactory.getFfmpeg()).thenReturn(ffmpeg);
+        when(taskManager.getSongStorage()).thenReturn(songStorage);
+        when(taskManager.getMediaStorage()).thenReturn(mediaStorage);
+        when(taskManager.getAsyncTaskStorage()).thenReturn(taskStorage);
+        when(taskManager.getFileManager()).thenReturn(fileManager);
+        when(taskManager.getFfmpeg()).thenReturn(ffmpeg);
         lenient().when(mediaStorage.locationFor(anyString(), anyString())).thenCallRealMethod();
         track = TestData.partTrackDto(PART_NAME, false);
-        task = new ProcessUploadedPartTask(track, taskFactory);
+        task = new ProcessUploadedPartTask(track, taskManager);
     }
 
     @Test
@@ -112,7 +108,7 @@ public class ProcessUploadedPartTaskTest {
 
         verify(mediaStorage).getMedia(MEDIA_LOCATION);
         verify(songStorage).writeTrack(track);
-        verify(taskFactory, never()).scheduleCreateMixTrackTask(any(AudioTrackDTO.class));
+        verify(taskManager, never()).scheduleCreateMixTrackTask(any(AudioTrackDTO.class));
         verifyNoMoreInteractions(mediaStorage, songStorage);
         verify(taskStorage).getTask(task.taskId());
         verify(taskStorage, times(2)).updateTask(taskDtoCaptor.capture());
@@ -138,7 +134,7 @@ public class ProcessUploadedPartTaskTest {
 
         verify(mediaStorage).getMedia(MEDIA_LOCATION);
         verify(songStorage).writeTrack(track);
-        verify(taskFactory, times(2)).scheduleCreateMixTrackTask(any(AudioTrackDTO.class));
+        verify(taskManager, times(2)).scheduleCreateMixTrackTask(any(AudioTrackDTO.class));
         verifyNoMoreInteractions(mediaStorage, songStorage);
         verify(taskStorage).getTask(task.taskId());
         verify(taskStorage, times(2)).updateTask(taskDtoCaptor.capture());

@@ -157,8 +157,8 @@ public class TableEntityMapper<E> {
         PropertyHandler<E> baseHandler = new BeanUtilsPropertyHandler<>(name, descriptor, odataType);
         if (name.equals(TablesConstants.TIMESTAMP_KEY)) {
             return new TimestampPropertyHandlerDecorator<>(baseHandler, getter.getReturnType());
-        } else if (getter.getReturnType().equals(ETag.class)) {
-            return new ETagPropertyHandlerDecorator(baseHandler);
+        } else if (name.equals(TablesConstants.ODATA_ETAG_KEY)) {
+            return new ETagPropertyHandlerDecorator<>(baseHandler, getter.getReturnType());
         } else if (jsonSerialize) {
             return new JsonPropertyHandlerDecorator<>(baseHandler, TypeFactory.defaultInstance().constructType(getter.getGenericReturnType()));
         } else {

@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -17,6 +18,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.AudioDebugger;
 import org.raincityvoices.ttrack.service.audio.Ffmpeg;
+import org.raincityvoices.ttrack.service.exceptions.ConflictException;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
@@ -27,6 +29,7 @@ import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.raincityvoices.ttrack.service.util.Temp;
+import org.slf4j.MDC;
 
 import com.azure.cosmos.implementation.apachecommons.lang.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +44,9 @@ import lombok.extern.slf4j.Slf4j;
 @Getter(AccessLevel.PROTECTED)
 @Accessors(fluent = true)
 public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
+
+    private static final Duration MAX_WAIT_FOR_LOCK = Duration.ofSeconds(30);
+    private static final Duration LOCK_POLL_INTERVAL = Duration.ofMillis(3000);
 
     public enum ActionOnConflict {
         /** Wait for the other task to complete and then run this one. */
@@ -60,7 +66,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
     private final String songId;
     private final String trackId;
     private final AudioDebugger.Settings debugSettings;
-    private final AudioTrackTaskFactory factory;
+    private final AudioTrackTaskManager manager;
     private final SongStorage songStorage;
     private final MediaStorage mediaStorage;
     private final AsyncTaskStorage asyncTaskStorage;
@@ -71,24 +77,24 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
     private AsyncTaskDTO asyncTask;
     private final Clock clock;
 
-    protected AudioTrackTask(AudioTrackDTO track, AudioTrackTaskFactory factory) {
-        this(track.getSongId(), track.getId(), factory);
+    protected AudioTrackTask(AudioTrackDTO track, AudioTrackTaskManager manager) {
+        this(track.getSongId(), track.getId(), manager);
     }
 
-    protected AudioTrackTask(String songId, String trackId, AudioTrackTaskFactory factory) {
+    protected AudioTrackTask(String songId, String trackId, AudioTrackTaskManager manager) {
         Preconditions.checkNotNull(songId);
         Preconditions.checkNotNull(trackId);
-        Preconditions.checkNotNull(factory);
+        Preconditions.checkNotNull(manager);
         this.taskId = UUID.randomUUID().toString();
         this.songId = songId;
         this.trackId = trackId;
-        this.factory = factory;
-        this.songStorage = factory.getSongStorage();
-        this.mediaStorage = factory.getMediaStorage();
-        this.fileManager = factory.getFileManager();
-        this.ffmpeg = factory.getFfmpeg();
-        this.asyncTaskStorage = factory.getAsyncTaskStorage();
-        this.debugSettings = factory.getDebugSettings();
+        this.manager = manager;
+        this.songStorage = manager.getSongStorage();
+        this.mediaStorage = manager.getMediaStorage();
+        this.fileManager = manager.getFileManager();
+        this.ffmpeg = manager.getFfmpeg();
+        this.asyncTaskStorage = manager.getAsyncTaskStorage();
+        this.debugSettings = manager.getDebugSettings();
         this.clock = Clock.systemUTC();
     }
 
@@ -108,20 +114,23 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
      */
     public void initialize() throws Exception {
         track = describeTrackOrThrow(trackId);
-        if (track.getCurrentTaskId() != null) {
-            log.info("Track {} is currently held by task {}", trackFqId(), track.getCurrentTaskId());
-            while (track.getCurrentTaskId() != null) {
-                log.debug("Waiting for other task to release the track...");
-                Thread.sleep(1000);
-                track = describeTrackOrThrow(trackId);
-            }
-        }
         doInitialize();
         createAsyncTaskRecord();
     }
 
     @Override
     public AudioTrackDTO call() throws Exception {
+        MDC.put("correlationId", taskId());
+        fetchTaskOrFail();
+        log.info("Task {} waiting for lock...", taskId());
+        try {
+            asyncTask.setStatus(AsyncTaskDTO.PENDING);
+            asyncTaskStorage.updateTask(asyncTask);
+            waitForLock(MAX_WAIT_FOR_LOCK);
+        } catch (Exception e) {
+            log.error("Failed while locking track {} for task {}", trackFqId(), taskId(), e);
+            throw new RuntimeException(e);
+        }
         log.info("Starting task {}", this);
         try {
             updateAsyncTaskRunning();
@@ -139,6 +148,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
         }
 
         try {
+            log.info("Task {} is now processing.", taskId());
             AudioTrackDTO processed = process();
             updateAsyncTaskSucceeded();
             log.info("Completed task {}", this);
@@ -147,12 +157,17 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
             log.error("Task failed processing", e);
             updateAsyncTaskFailed(e);
             throw new RuntimeException(e);
+        } finally {
+            log.info("Releasing lock on track {}", trackFqId());
+            track().setCurrentTaskId(null);
+            // TODO What if this gets an exception, e.g. ConflictException?
+            songStorage().writeTrack(track());
         }
     }
 
     /**
      * Create and persist an async task record in the database.
-     * The task is initially created with status PENDING.
+     * The task is initially created with status SCHEDULED.
      */
     private void createAsyncTaskRecord() {
         TaskMetadata metadata = getTaskMetadata();
@@ -161,7 +176,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
                 .taskId(taskId)
                 .songId(songId)
                 .trackId(trackId)
-                .status(AsyncTaskDTO.PENDING)
+                .status(AsyncTaskDTO.SCHEDULED)
                 .taskType(getTaskType())
                 .scheduled(Instant.now(clock))
                 .metadata(metadata)
@@ -175,16 +190,19 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
      * Update async task status to RUNNING after initialization.
      */
     private void updateAsyncTaskRunning() {
+        asyncTask.setStatus(AsyncTaskDTO.RUNNING);
+        asyncTask.setStartTime(clock().instant());
+        asyncTaskStorage.updateTask(asyncTask);
+        log.info("Updated async task to RUNNING: {}", asyncTask.getTaskId());
+    }
+
+    private void fetchTaskOrFail() {
         if (asyncTask == null) {
             asyncTask = asyncTaskStorage().getTask(taskId);
             if (asyncTask == null) {
                 throw new RuntimeException("Async task with ID " + taskId + " not found in DB.");
             }
         }
-        asyncTask.setStatus(AsyncTaskDTO.RUNNING);
-        asyncTask.setStartTime(clock().instant());
-        asyncTaskStorage.updateTask(asyncTask);
-        log.info("Updated async task to RUNNING: {}", asyncTask.getTaskId());
     }
 
     /**
@@ -237,6 +255,35 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
      * @return the final track DTO that should be persisted.
      */
     protected abstract AudioTrackDTO process() throws Exception;
+
+    private boolean waitForLock(Duration timeout) throws InterruptedException {
+        Instant timeLimit = clock.instant().plus(timeout);
+        refreshTrack();
+        while (true) {
+            while (track.getCurrentTaskId() != null) {
+                if (clock.instant().isAfter(timeLimit)) {
+                    return false;
+                }
+                log.info("Track {} is locked by task {}. Waiting...", trackFqId(), track.getCurrentTaskId());
+                Thread.sleep(LOCK_POLL_INTERVAL);
+                refreshTrack();
+            }
+            // attempt to lock
+            track.setCurrentTaskId(taskId());
+            try {
+                songStorage().writeTrack(track);
+                // Great, we got the lock.
+                return true;
+            } catch(ConflictException e) {
+                // Ugh, somebody else did something. Keep trying.
+                refreshTrack();
+            }
+        }
+    }
+
+    protected void refreshTrack() {
+        track = describeTrackOrThrow(trackId);
+    }
 
     protected AudioTrackDTO describeTrackOrThrow(String trackId) {
         AudioTrackDTO dto = songStorage().describeTrack(songId(), trackId);

@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -29,9 +27,7 @@ import org.raincityvoices.ttrack.service.storage.MediaContent;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
-import org.raincityvoices.ttrack.service.tasks.AudioTrackTaskFactory;
-import org.raincityvoices.ttrack.service.util.FileManager;
-import org.raincityvoices.ttrack.service.util.Temp;
+import org.raincityvoices.ttrack.service.tasks.AudioTrackTaskManager;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.util.MimeTypeUtils;
@@ -64,8 +60,7 @@ public class SongController {
 
     private final SongStorage songStorage;
     private final MediaStorage mediaStorage;
-    private final FileManager fileManager;
-    private final AudioTrackTaskFactory taskFactory;
+    private final AudioTrackTaskManager taskManager;
 
     private static final DefaultUriBuilderFactory URI_BUILDER_FACTORY = new DefaultUriBuilderFactory("/songs/");
 
@@ -161,7 +156,7 @@ public class SongController {
         mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
         track.setMediaLocation(mediaLocation);
         songStorage.writeTrack(track);
-        taskFactory.scheduleProcessUploadedTrackTask(track);
+        taskManager.scheduleProcessUploadedTrackTask(track);
         return part.name();
     }
 
@@ -325,7 +320,7 @@ public class SongController {
             songStorage.writeTrack(newDto);
         }
 
-        taskFactory.scheduleCreateMixTrackTask(newDto);
+        taskManager.scheduleCreateMixTrackTask(newDto);
 
         return toMixTrack(newDto);
     }

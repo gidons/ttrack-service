@@ -3,8 +3,6 @@ package org.raincityvoices.ttrack.service.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
-import org.raincityvoices.ttrack.service.api.Song;
-import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;

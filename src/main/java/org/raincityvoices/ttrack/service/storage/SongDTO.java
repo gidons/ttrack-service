@@ -2,7 +2,6 @@ package org.raincityvoices.ttrack.service.storage;
 
 import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.SongId;
-import org.raincityvoices.ttrack.service.storage.mapper.BaseDTO;
 import org.raincityvoices.ttrack.service.storage.mapper.PartitionKey;
 
 import lombok.AllArgsConstructor;
