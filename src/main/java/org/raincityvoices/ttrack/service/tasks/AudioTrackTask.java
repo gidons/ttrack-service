@@ -27,6 +27,7 @@ import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.MediaContent;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
+import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
@@ -80,6 +81,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
     private final AsyncTaskStorage asyncTaskStorage;
     private final FileManager fileManager;
 
+    private SongDTO song;
     private AudioTrackDTO track;
     private AsyncTaskDTO asyncTask;
     private final Clock clock;
@@ -119,6 +121,10 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
      * @throws Exception
      */
     public void initialize() throws Exception {
+        song = songStorage.describeSong(songId);
+        if (song == null) {
+            throw new IllegalArgumentException(String.format("Song %s does not exist.", songId()));
+        }
         track = describeTrackOrThrow(trackId);
         doInitialize();
         createAsyncTaskRecord();

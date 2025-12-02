@@ -36,6 +36,7 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
     }
 
     protected final AudioTrackDTO mixTrack() { return track(); }
+
     protected AudioTrackDTO performMix() throws UnsupportedAudioFileException, IOException {
         MixInfo mixInfo = SongController.toMixTrack(track()).mixInfo();
         int numParts = mixInfo.parts().size();
@@ -61,7 +62,7 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
             }
 
             AudioMixingStream mixingStream = AudioMixingStream.create(inputStreams, mixTrack().getAudioMix());
-            AudioTrackDTO uploaded = uploadStream(mixingStream, mixTrack().getId() + AudioFormats.MP3_EXT);
+            AudioTrackDTO uploaded = uploadStream(mixingStream, generateMixFileName());
             log.info("Uploaded mixed audio to {}", uploaded.getMediaLocation());
             return uploaded;
         } finally {
@@ -72,5 +73,9 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
                 }
             }
         }
+    }
+
+    private String generateMixFileName() {
+        return String.format("%s - %s%s", song().getTrackPrefix(), mixTrack().getId(), AudioFormats.MP3_EXT);
     }
 }

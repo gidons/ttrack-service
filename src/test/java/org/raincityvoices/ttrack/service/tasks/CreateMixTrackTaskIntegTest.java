@@ -12,11 +12,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.api.SongId;
+import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 import org.raincityvoices.ttrack.service.model.TestData;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.util.Temp;
@@ -89,6 +91,10 @@ public class CreateMixTrackTaskIntegTest {
         AudioTrackDTO partTrack = songStorage.describePart(TestData.SUNSHINE_SONG_ID, TestData.LEAD.name());
         assertTrue(mixTrack.hasMedia());
         assertEquals(partTrack.getDurationSec() * 1 / mixTrack.getSpeedFactor(), mixTrack.getDurationSec(), 1.0);
+        FileMetadata metadata = mediaStorage.getMediaMetadata(mediaStorage.locationFor(TestData.SUNSHINE_SONG_ID, TEST_MIX_NAME));
+        assertEquals("Sunshine - " + TEST_MIX_NAME + ".mp3", metadata.fileName());
+        assertEquals(AudioFormats.MP3_TYPE, metadata.contentType());
+        assertEquals(mixTrack.getDurationSec(), metadata.durationSec(), 1.0);
         assertEquals(null, mixTrack.getCurrentTaskId());
     }
 

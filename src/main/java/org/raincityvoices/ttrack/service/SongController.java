@@ -240,11 +240,20 @@ public class SongController {
 
     @GetMapping("/{id}/mixes/{mixName}")
     public MixTrack describeMix(@PathVariable("id") SongId songId, @PathVariable("mixName") String mixName) {
-        log.info("Starting describeMix for song ID {}, mix name {}", songId, mixName);
         AudioTrackDTO trackDto = songStorage.describeMix(songId.value(), mixName);
         if (trackDto == null) {
             throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
+        return toMixTrack(trackDto);
+    }
+
+    @PostMapping("/{id}/mixes/{mixName}/refresh")
+    public MixTrack refreshMix(@PathVariable("id") SongId songId, @PathVariable("mixName") String mixName) {
+        AudioTrackDTO trackDto = songStorage.describeMix(songId.value(), mixName);
+        if (trackDto == null) {
+            throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
+        }
+        taskManager.scheduleCreateMixTrackTask(trackDto);
         return toMixTrack(trackDto);
     }
 

@@ -13,10 +13,16 @@ public class SongTest {
     @Test
     public void test() throws JsonMappingException, JsonProcessingException {
         String json = """
-                {"title":"Hi Diddly Dum","arranger":"Billy Gard","key":"Bb","durationSec":100}
+                {"title":"Hi Diddly Dum","shortTitle":"Diddly","arranger":"Billy Gard","key":"Bb","durationSec":100}
                 """;
-        // Song song = Song.builder().title("ttt").arranger("sss").durationSec(123).key("B").build();
         Song song = JsonUtils.newMapper().readValue(json, Song.class);
         assertEquals(SongId.NONE, song.getId());
+        assertEquals(Song.builder()
+            .title("Hi Diddly Dum")
+            .shortTitle("Diddly")
+            .arranger("Billy Gard")
+            .key("Bb")
+            .durationSec(100)
+            .build(), song);
     }
 }

@@ -64,3 +64,4 @@ build/
 /terraform/.terraform/
 /terraform/terraform.tfstate*
 cache
+LOG_FILE_IS_UNDEFINED

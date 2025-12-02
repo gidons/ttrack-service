@@ -1,5 +1,6 @@
 package org.raincityvoices.ttrack.service.storage;
 
+import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.storage.mapper.PartitionKey;
@@ -26,6 +27,8 @@ public class SongDTO extends BaseDTO {
     private String id;
     /** Song title. */
     private String title;
+    /** Short title used as track name prefix. */
+    private String shortTitle;
     /** 
      * Version of this song, in case there are multiple (e.g. different arrangers, different interps, for different ensembles, etc.)
      * The version is free-form text, and can be empty, but should be unique per song title.
@@ -42,10 +45,15 @@ public class SongDTO extends BaseDTO {
     public String getRowKey() { return ""; }
     public void setRowKey(String rk) { if (!"".equals(rk)) throw new IllegalArgumentException("Unexpected RowKey '" + rk + "' set for SongDTO with ID '" + id + "'; expected empty string"); }
 
+    public String getTrackPrefix() {
+        return StringUtils.defaultIfBlank(shortTitle, title);
+    }
+
     public static SongDTO fromSong(Song song) {
         return SongDTO.builder()
             .id(song.getId().value())
             .title(song.getTitle())
+            .shortTitle(song.getShortTitle())
             .version(song.getVersion())
             .arranger(song.getArranger())
             .key(song.getKey())
@@ -57,6 +65,7 @@ public class SongDTO extends BaseDTO {
         return Song.builder()
             .id(SongId.orNone(id))
             .title(title)
+            .shortTitle(shortTitle)
             .version(version)
             .arranger(arranger)
             .key(key)
