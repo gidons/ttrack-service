@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
+import lombok.ToString;
 import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.jackson.Jacksonized;
@@ -17,6 +18,7 @@ import lombok.extern.jackson.Jacksonized;
  * This can easily be generalized to more output channels, but for now we only need stereo.
  */
 @Value
+@ToString(exclude = {"leftMix", "rightMix", "sample"})
 @Accessors(fluent = true)
 @Jacksonized
 @JsonIgnoreProperties({"sample", "leftMix", "rightMix"})

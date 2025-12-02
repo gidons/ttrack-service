@@ -3,7 +3,11 @@ package org.raincityvoices.ttrack.service;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
+
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -125,30 +129,62 @@ public class SongController {
 
     @DeleteMapping("/{id}")
     public void deleteSong(@PathVariable("id") SongId songId) {
-        log.info("Starting deleteSong for id {}", songId);
     }
 
     @GetMapping({"/{id}/parts/{partName}","/{id}/parts/{partName}/"})
     public PartTrack describePart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part) {
-        log.info("Starting describePart for song ID {}, part {}", songId, part);
         AudioTrackDTO dto = songStorage.describePart(songId.value(), part.name());
         return toPartTrack(dto);
+    }
+
+    @PutMapping({"/{id}/parts", "/{id}/parts/"})
+    public void uploadMediaForMultipleParts(@PathVariable("id") SongId songId, @QueryParam("overwrite") boolean overwrite,
+                                            @RequestParam Map<String, MultipartFile> fileFields, 
+                                            @RequestParam Map<String, String> otherFields) throws Exception {
+        String[] partNames = otherFields.keySet().stream()
+            .filter(n -> n.startsWith("part"))
+            .sorted()
+            .map(otherFields::get)
+            .collect(Collectors.toList())
+            .toArray(new String[0]);
+        MultipartFile[] files = fileFields.keySet().stream()
+            .filter(n -> n.startsWith("file"))
+            .sorted()
+            .map(fileFields::get)
+            .collect(Collectors.toList())
+            .toArray(new MultipartFile[0]);
+        if (files.length != partNames.length) {
+            throw new BadRequestException("Request specifies a different number of files (" + files.length +") and part names (" + partNames.length + ")");
+        }
+        for (int i = 0; i < files.length; ++i) {
+            log.info("Uploading {} as part {}", files[i].getOriginalFilename(), partNames[i]);
+            AudioTrackDTO track = uploadOnePart(songId.value(), partNames[i], overwrite, files[i]);
+            // TODO [SCRUM-28] these tasks are doing a lot of repetitive work refreshing mixes.
+            taskManager.scheduleProcessUploadedTrackTask(track);
+        }
     }
 
     @PutMapping("/{id}/parts/{partName}")
     public String uploadMediaForPart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part, 
                                      @QueryParam("overwrite") boolean overwrite, @RequestParam MultipartFile audioFile) throws Exception {
+        final AudioTrackDTO track = uploadOnePart(songId.value(), part.name(), overwrite, audioFile);
+        taskManager.scheduleProcessUploadedTrackTask(track);
+        return part.name();
+    }
+
+    private AudioTrackDTO uploadOnePart(String songId, String part, boolean overwrite, MultipartFile audioFile)
+            throws IOException, UnsupportedAudioFileException {
         final AudioTrackDTO track;
-        AudioTrackDTO existing = songStorage.describePart(songId.value(), part.name());
+        AudioTrackDTO existing = songStorage.describePart(songId, part);
         if (existing != null) {
             if(!overwrite) {
-                throw new ConflictException("Part '" + part.name() + "' already exists. Use overwrite=true to replace it.");
+                throw new ConflictException("Part '" + part + "' already exists. Use overwrite=true to replace it.");
             }
             track = existing;
         } else {
             track = AudioTrackDTO.builder()
-                    .songId(songId.value())
-                    .id(part.name())
+                    .songId(songId)
+                    .id(part)
                     .build();
         }
         songStorage.writeTrack(track);
@@ -156,8 +192,7 @@ public class SongController {
         mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
         track.setMediaLocation(mediaLocation);
         songStorage.writeTrack(track);
-        taskManager.scheduleProcessUploadedTrackTask(track);
-        return part.name();
+        return track;
     }
 
     @GetMapping({"/{id}/parts/{partName}/media","/{id}/parts/{partName}/media/"})

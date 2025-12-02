@@ -1,6 +1,7 @@
 package org.raincityvoices.ttrack.service.tasks;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -13,11 +14,12 @@ import java.util.concurrent.Callable;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.AudioDebugger;
-import org.raincityvoices.ttrack.service.audio.Ffmpeg;
+import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.exceptions.ConflictException;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
@@ -28,7 +30,6 @@ import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
-import org.raincityvoices.ttrack.service.util.Temp;
 import org.slf4j.MDC;
 
 import com.azure.cosmos.implementation.apachecommons.lang.StringUtils;
@@ -39,12 +40,19 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
+import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 
 @Slf4j
 @Getter(AccessLevel.PROTECTED)
 @Accessors(fluent = true)
 public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
 
+    /** 
+     * The default initial size to use when encoding MP3 to memory.
+     * If this is bigger than the total MP3 track size we can avoid reallocation.
+     * However, it's probably not a big deal if it isn't.
+     */
+    private static final int DEFAULT_MP3_BUF_SIZE = 4000000;
     private static final Duration MAX_WAIT_FOR_LOCK = Duration.ofSeconds(30);
     private static final Duration LOCK_POLL_INTERVAL = Duration.ofMillis(3000);
 
@@ -71,7 +79,6 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
     private final MediaStorage mediaStorage;
     private final AsyncTaskStorage asyncTaskStorage;
     private final FileManager fileManager;
-    private final Ffmpeg ffmpeg;
 
     private AudioTrackDTO track;
     private AsyncTaskDTO asyncTask;
@@ -92,7 +99,6 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
         this.songStorage = manager.getSongStorage();
         this.mediaStorage = manager.getMediaStorage();
         this.fileManager = manager.getFileManager();
-        this.ffmpeg = manager.getFfmpeg();
         this.asyncTaskStorage = manager.getAsyncTaskStorage();
         this.debugSettings = manager.getDebugSettings();
         this.clock = Clock.systemUTC();
@@ -298,14 +304,12 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
             track().setMediaLocation(mediaStorage.locationFor(new SongId(track.getSongId()), track.getId()));
         }
         log.info("Processing audio to upload to {}", track().getMediaLocation());
-        try (Temp.File tempWav = Temp.file("mix", ".wav");
-                Temp.File tempMp3 = Temp.file("mix", ".mp3")) {
-            log.info("Writing audio to temp file {}...", tempWav);
-            fileManager.writeWavAudio(stream, tempWav);
-            log.info("Converting to MP3 file {}...", tempMp3);
-            ffmpeg.convertToMp3(tempWav, tempMp3);
-            log.info("Uploading MP3 audio file to {}...", track.getMediaLocation());
-            InputStream mediaStream = new BufferedInputStream(new FileInputStream(tempMp3));
+        AudioInputStream mp3Stream = AudioFormats.toMp3Stream(stream);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(DEFAULT_MP3_BUF_SIZE);
+        try /* (Temp.File tempMp3 = Temp.file("mix", ".mp3")) */ {
+            log.info("Uploading MP3 audio to {}...", track.getMediaLocation());
+            AudioSystem.write(mp3Stream, MpegAudioFileWriter.MP3, baos);
+            InputStream mediaStream = new ByteArrayInputStream(baos.toByteArray());
             FileMetadata metadata = FileMetadata.builder().fileName(originalFileName).build();
             mediaStorage().putMedia(track().getMediaLocation(), new MediaContent(mediaStream, metadata));
             log.info("Audio uploaded.");

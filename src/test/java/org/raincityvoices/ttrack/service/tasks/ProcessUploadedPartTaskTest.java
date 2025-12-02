@@ -1,7 +1,6 @@
 package org.raincityvoices.ttrack.service.tasks;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
@@ -20,7 +19,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.raincityvoices.ttrack.service.audio.Ffmpeg;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.model.TestData;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
@@ -47,8 +45,6 @@ public class ProcessUploadedPartTaskTest {
     @Mock
     private FileManager fileManager;
     @Mock
-    private Ffmpeg ffmpeg;
-    @Mock
     private AudioTrackTaskManager taskManager;
 
     private ProcessUploadedPartTask task;
@@ -63,7 +59,6 @@ public class ProcessUploadedPartTaskTest {
         when(taskManager.getMediaStorage()).thenReturn(mediaStorage);
         when(taskManager.getAsyncTaskStorage()).thenReturn(taskStorage);
         when(taskManager.getFileManager()).thenReturn(fileManager);
-        when(taskManager.getFfmpeg()).thenReturn(ffmpeg);
         lenient().when(mediaStorage.locationFor(anyString(), anyString())).thenCallRealMethod();
         track = TestData.partTrackDto(PART_NAME, false);
         task = new ProcessUploadedPartTask(track, taskManager);
@@ -85,8 +80,8 @@ public class ProcessUploadedPartTaskTest {
         when(songStorage.describeTrack(anyString(), anyString())).thenReturn(track);
         when(mediaStorage.exists(anyString())).thenReturn(false); 
 
-        assertThrows("media", RuntimeException.class, 
-            () -> task.initialize());
+        assertThrows(RuntimeException.class, 
+            () -> task.initialize(), "media");
 
         verify(songStorage).describeTrack(TestData.TEST_SONG_ID, PART_NAME);
         verify(mediaStorage).exists(track.getMediaLocation());
@@ -107,13 +102,15 @@ public class ProcessUploadedPartTaskTest {
         assertEquals((int)fileMetadata.durationSec(), track.getDurationSec().intValue());
 
         verify(mediaStorage).getMedia(MEDIA_LOCATION);
-        verify(songStorage).writeTrack(track);
+        // Track is written 3 times: first to lock, then to update, finally to unlock.
+        verify(songStorage, times(3)).writeTrack(track);
         verify(taskManager, never()).scheduleCreateMixTrackTask(any(AudioTrackDTO.class));
         verifyNoMoreInteractions(mediaStorage, songStorage);
         verify(taskStorage).getTask(task.taskId());
-        verify(taskStorage, times(2)).updateTask(taskDtoCaptor.capture());
+        // Task is written 3 times, to set the status to PENDING, then RUNNING, then SUCCEEDED.
+        verify(taskStorage, times(3)).updateTask(taskDtoCaptor.capture());
     }
-
+    
     @Test
     public void GIVEN_two_mix_tracks_WHEN_process_THEN_update_metadata_and_schedule_two_mix_tasks() throws Exception {
         FileMetadata fileMetadata = FileMetadata.fromAudioFileFormat(AudioFormats.WAV_MONO).withDurationSec(45);
@@ -125,19 +122,22 @@ public class ProcessUploadedPartTaskTest {
         AudioTrackDTO mix1 = TestData.mixTrackDto(PART_NAME + " dominant");
         AudioTrackDTO mix2 = TestData.mixTrackDto(PART_NAME + " missing");
         AudioTrackDTO irrelevantMix = TestData.mixTrackDto("Full Mix").toBuilder()
-            .parts(List.of("Some", "Other", "Parts")).build();
+                .parts(List.of("Some", "Other", "Parts"))
+                .build();
         when(songStorage.listMixesForSong(anyString())).thenReturn(List.of(mix1, irrelevantMix, mix2));
-
+        
         task.call();
-
+        
         assertEquals((int)fileMetadata.durationSec(), track.getDurationSec().intValue());
-
+        
         verify(mediaStorage).getMedia(MEDIA_LOCATION);
-        verify(songStorage).writeTrack(track);
+        // Track is written 3 times: first to lock, then to update, finally to unlock.
+        verify(songStorage, times(3)).writeTrack(track);
         verify(taskManager, times(2)).scheduleCreateMixTrackTask(any(AudioTrackDTO.class));
         verifyNoMoreInteractions(mediaStorage, songStorage);
         verify(taskStorage).getTask(task.taskId());
-        verify(taskStorage, times(2)).updateTask(taskDtoCaptor.capture());
+        // Task is written 3 times, to set the status to PENDING, then RUNNING, then SUCCEEDED.
+        verify(taskStorage, times(3)).updateTask(taskDtoCaptor.capture());
     }
 
     private AsyncTaskDTO newTaskDto() {
@@ -156,8 +156,7 @@ public class ProcessUploadedPartTaskTest {
     public void GIVEN_no_task_record_WHEN_process_THEN_throw_RTE() throws Exception {
         when(taskStorage.getTask(anyString())).thenReturn(null);
 
-        assertThrows(task.taskId(), RuntimeException.class, 
-            () -> task.call());
+        assertThrows(RuntimeException.class, () -> task.call(), task.taskId());
 
         verify(taskStorage).getTask(task.taskId());
     }

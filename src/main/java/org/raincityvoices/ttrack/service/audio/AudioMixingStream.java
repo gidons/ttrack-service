@@ -74,29 +74,22 @@ public class AudioMixingStream extends AudioInputStream {
 
         @Override
         public int read(byte[] b, int off, int len) throws IOException {
-            /* 
-             * TODO this assumes that we can always read as many bytes as we need until EOF,
-             * so all the input streams always stay in sync. May need to buffer them internally
-             * so if we get less data for one stream we keep what we got from the others and only
-             * read what we need to fill up to bytesToRead.
-             */
             int numFrames = Math.min(len / outputFormat.getFrameSize(), bufferFrames);
             int bytesToRead = numFrames * inputFormat.getFrameSize();
             int minReadFrames = numFrames;
             for (int i = 0; i < numInputs(); ++i) {
                 ByteBuffer bb = inBytes[i];
                 FloatBuffer fb = inBuffers[i];
-                int readBytes = inputStreams[i].read(bb.array(), 0, bytesToRead);
-                int readFrames = readBytes / format(i).getFrameSize();
+                int readBytes = readFromStream(i, bb.array(), 0, bytesToRead);
                 if (readBytes < 0) {
-                    log.info("EOF for stream {}", i);
-                    // EOF. No data read.
+                    // EOF
                     return -1;
                 }
+                int readFrames = readBytes / format(i).getFrameSize();
                 bb.limit(readBytes).rewind();
                 inDebuggers[i].logBuffer(bb);
                 if (readFrames < minReadFrames) {
-                    log.warn("Only read {} frames for stream {}", readFrames, i);
+                    log.warn("Only read {} frames for stream {}; expected {}", readFrames, i, numFrames);
                     minReadFrames = readFrames;
                 }
                 converter.toFloatArray(bb.array(), fb.array(), readFrames);
@@ -113,6 +106,38 @@ public class AudioMixingStream extends AudioInputStream {
             outBytes.order(inputFormat.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
             outDebugger.logBuffer(outBytes);
             return minReadFrames * outputFormat.getFrameSize();
+        }
+
+        /**
+         * Read exactly {@code len} bytes from the input stream into the buffer,
+         * unless the stream hits EOF (in which all available bytes are read).
+         * If the stream doesn't have enough bytes available, try again until they
+         * are (or until EOF), blocking if necessary.
+         * @return the number of bytes read.
+         */
+        private int readFromStream(int i, byte[] buf, int off, int len) throws IOException {
+            int readBytes = inputStreams[i].read(buf, 0, len);
+            log.debug("Read {} bytes from stream {}", readBytes, i);
+            if (readBytes < 0) {
+                log.info("EOF for stream {}", i);
+                // EOF. No data read.
+                return -1;
+            }
+            /**
+             * TODO: this can potentially block while waiting for more input, which is sub-optimal.
+             * A better solution would be to process the max frames we have from all streams, and
+             * keep around whatever we didn't process, only fetching enough bytes from each stream
+             * to add up to the requested bytes (if available).
+             */
+            while (readBytes < len) {
+                int additionalBytes = inputStreams[i].read(buf, readBytes, len - readBytes);
+                log.debug("Read {} additional bytes from stream {}", additionalBytes, i);
+                if (additionalBytes < 0) {
+                    break;
+                }
+                readBytes += additionalBytes;
+            }
+            return readBytes;
         }
 
         public int numInputs() {

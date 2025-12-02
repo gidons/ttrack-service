@@ -12,6 +12,7 @@ import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.audio.AudioMixingStream;
 import org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter;
 import org.raincityvoices.ttrack.service.audio.TarsosUtils;
+import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaContent;
@@ -50,7 +51,7 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
                 AudioTrackDTO partTrack = partTracks.get(i);
                 log.info("Reading media for part {} from {}", partTrack.getId(), partTrack.getMediaLocation());
                 MediaContent content = mediaStorage().getMedia(partTrack.getMediaLocation());
-                inputStreams[i] = AudioSystem.getAudioInputStream(content.stream());
+                inputStreams[i] = AudioFormats.toPcmStream(AudioSystem.getAudioInputStream(content.stream()));
                 if (needAudioMod) {
                     log.info("Applying pitch shift {}, speed factor {}", mixTrack().getPitchShift(), mixTrack().getSpeedFactor());
                     adapters[i] = new TarsosStreamAdapter(
@@ -60,7 +61,7 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
             }
 
             AudioMixingStream mixingStream = AudioMixingStream.create(inputStreams, mixTrack().getAudioMix());
-            AudioTrackDTO uploaded = uploadStream(mixingStream, null);
+            AudioTrackDTO uploaded = uploadStream(mixingStream, mixTrack().getId() + AudioFormats.MP3_EXT);
             log.info("Uploaded mixed audio to {}", uploaded.getMediaLocation());
             return uploaded;
         } finally {

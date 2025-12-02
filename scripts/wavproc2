@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# Script to execute the WavProcessor Java class using Maven's exec:java goal.
+#
+# Usage: ./wavproc.sh <argument 1> <argument 2> ...
+# Example: ./wavproc.sh ext -i input.wav -o output.mp3
+#
+# This script ensures that all command-line arguments are properly escaped and
+# grouped into a single string for the -Dexec.args property.
+
+# --- Configuration ---
+# 1. Define the fully qualified name of the main class.
+MAIN_CLASS="org.raincityvoices.ttrack.tools.WavProcessor"
+# 2. Define the Maven goal.
+MAVEN_GOAL="exec:java"
+
+# --- Argument Handling ---
+# The $@ variable contains all arguments passed to this script, separately.
+# We need to process these arguments so they are correctly passed as a single string
+# to the -Dexec.args system property.
+
+# Use printf %q to quote arguments for the shell, which effectively turns them
+# into a single, space-separated, properly-escaped string for Dexec.args.
+# If no arguments are passed, this results in an empty string.
+ARGS=$(printf "%q " "$@")
+
+# Trim trailing space if arguments were present
+ARGS="${ARGS% }"
+
+echo "--- Invoking Maven Exec Goal ---"
+echo "Main Class: ${MAIN_CLASS}"
+echo "Arguments:  ${ARGS}"
+echo "----------------------------------"
+
+# Construct and execute the full Maven command.
+# Note: $ARGS is intentionally not double-quoted here so that the shell-quoted
+# arguments within $ARGS are interpreted as the single string value for -Dexec.args.
+mvn ${MAVEN_GOAL} \
+    -Dexec.mainClass="${MAIN_CLASS}" \
+    "-Dexec.args=${ARGS}"
+
+# Check the exit status of the Maven command
+if [ $? -eq 0 ]; then
+    echo "WavProcessor finished successfully."
+else
+    echo "WavProcessor encountered an error." >&2
+fi

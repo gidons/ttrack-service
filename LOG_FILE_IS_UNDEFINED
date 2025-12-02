@@ -1,0 +1,15 @@
+2025-12-02T14:46:46.502-08:00  INFO  --- [main] o.r.ttrack.tools.WavProcessor            : Input parts: [AudioPart:bass, AudioPart:bari, AudioPart:lead, AudioPart:tenor]
+2025-12-02T14:46:46.507-08:00  INFO  --- [main] o.r.ttrack.tools.WavProcessor            : Input files: [data/sunshine-bass.wav, data/sunshine-bari.wav, data/sunshine-lead.wav, data/sunshine-tenor.wav]
+2025-12-02T14:46:46.558-08:00  INFO  --- [main] o.r.ttrack.service.audio.MixUtils        : Parsing stereo mix name: 'stereo bass'
+2025-12-02T14:46:46.559-08:00  INFO  --- [main] o.r.ttrack.service.audio.MixUtils        : Result: StereoMix(leftFactors=[1.0, 0.0, 0.0, 0.0], rightFactors=[0.0, 0.33333334, 0.33333334, 0.33333334])
+2025-12-02T14:46:46.560-08:00  INFO  --- [main] o.r.ttrack.tools.WavProcessor            : Mix: StereoMix(leftFactors=[1.0, 0.0, 0.0, 0.0], rightFactors=[0.0, 0.33333334, 0.33333334, 0.33333334])
+2025-12-02T14:46:46.614-08:00  INFO  --- [main] o.r.ttrack.tools.WavProcessor            : Output stream format: {"encoding":"MPEG1L3","sampleRate":48000.0,"sampleSizeInBits":-1,"channels":2,"frameSize":-1,"frameRate":-1.0,"bigEndian":false}
+2025-12-02T14:46:46.615-08:00  INFO  --- [main] o.r.ttrack.tools.WavProcessor            : Writing output to ./sunshine-bass-left.mp3
+2025-12-02T14:46:48.988-08:00  WARN  --- [main] o.r.t.service.audio.AudioMixingStream    : Only read 586 frames for stream 0; expected 1024
+2025-12-02T14:46:48.989-08:00  INFO  --- [main] o.r.t.service.audio.AudioMixingStream    : EOF for stream 0
+2025-12-02T14:55:29.489-08:00  INFO  --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.raincityvoices.ttrack.service.tasks.CreateMixTrackTaskIntegTest]: CreateMixTrackTaskIntegTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-12-02T14:55:29.535-08:00  INFO  --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.raincityvoices.ttrack.service.ServiceApplication for test class org.raincityvoices.ttrack.service.tasks.CreateMixTrackTaskIntegTest
+2025-12-02T14:55:29.584-08:00  INFO  --- [main] o.s.b.d.r.RestartApplicationListener     : Restart disabled due to context in which it is running
+2025-12-02T14:57:37.262-08:00  INFO  --- [main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [org.raincityvoices.ttrack.service.tasks.CreateMixTrackTaskIntegTest]: CreateMixTrackTaskIntegTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2025-12-02T14:57:37.311-08:00  INFO  --- [main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration org.raincityvoices.ttrack.service.ServiceApplication for test class org.raincityvoices.ttrack.service.tasks.CreateMixTrackTaskIntegTest
+2025-12-02T14:57:37.359-08:00  INFO  --- [main] o.s.b.d.r.RestartApplicationListener     : Restart disabled due to context in which it is running

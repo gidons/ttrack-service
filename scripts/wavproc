@@ -1,0 +1,47 @@
+#!/usr/bin/env zsh
+# Wrapper to run the WavProcessor main class via Maven
+# Usage: scripts/wavproc ext -i input.wav -o out.mp3
+
+# Resolve script directory
+SCRIPT_DIR="$(cd "$(dirname "${0}")" && pwd)"
+PROJECT_ROOT="${SCRIPT_DIR}/.."
+
+MAIN_CLASS="org.raincityvoices.ttrack.tools.WavProcessor"
+
+if [[ "$#" -eq 0 ]]; then
+  echo "Usage: $(basename "$0") <args...>"
+  echo "Example: $(basename "$0") ext -i input.wav -o output.mp3"
+  exit 1
+fi
+
+# Build a single string of all args, preserving quoting for spaces by re-quoting
+# Using printf %q to escape each argument for the shell, then join with space.
+ARGS_STR=""
+for a in "$@"; do
+  # Use single-quote safe representation
+  # For portability between zsh/bash, use printf %q if available
+  if command -v printf >/dev/null 2>&1; then
+    esc=$(printf '%q' "$a")
+  else
+    # Fallback: naive quoting
+    esc="'${a//"/'"}'"
+  fi
+  if [[ -z "$ARGS_STR" ]]; then
+    ARGS_STR="$esc"
+  else
+    ARGS_STR="$ARGS_STR $esc"
+  fi
+done
+
+cd "$PROJECT_ROOT" || exit 2
+
+echo "Running: mvn exec:java -Dexec.mainClass=\"${MAIN_CLASS}\" -Dexec.args=\"${ARGS_STR}\""
+
+# Use mvn wrapper if present
+MVN="./mvnw"
+if [[ ! -x "$MVN" ]]; then
+  MVN="mvn"
+fi
+
+${MVN} exec:java -Dexec.mainClass="${MAIN_CLASS}" -Dexec.args="${ARGS_STR}"
+exit $?

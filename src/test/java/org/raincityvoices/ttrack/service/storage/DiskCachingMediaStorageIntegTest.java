@@ -3,9 +3,9 @@ package org.raincityvoices.ttrack.service.storage;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,6 +26,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
+import org.raincityvoices.ttrack.service.model.TestData;
+import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -35,8 +37,9 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest
 public class DiskCachingMediaStorageIntegTest {
     
-    private static final String FILENAME = "Sunshine Lead.wav";
-    private static final File TEST_WAV_FILE = new File("./src/test/resources/sunshine-lead.wav");
+    private static final String FILENAME_WAV = "Sunshine Lead.wav";
+    private static final String FILENAME_MP3 = "Sunshine Lead.mp3";
+    private static final File TEST_WAV_FILE = TestData.SUNSHINE_LEAD_WAV;
     private static final String LOCATION = "test/sunshine%20lead";
 
     @Autowired
@@ -75,7 +78,7 @@ public class DiskCachingMediaStorageIntegTest {
     @Test
     public void testMultithreadedDownload() throws Exception {
         AudioInputStream mediaStream = AudioSystem.getAudioInputStream(TEST_WAV_FILE);
-        FileMetadata metadata = FileMetadata.builder().fileName(FILENAME).build();
+        FileMetadata metadata = FileMetadata.builder().fileName(FILENAME_WAV).build();
         mediaStorage.putMedia(LOCATION, new MediaContent(mediaStream, metadata));
         mediaStream.close();
         
@@ -95,13 +98,13 @@ public class DiskCachingMediaStorageIntegTest {
         byte[] originalBytes = IOUtils.toByteArray(mediaStream);
         mediaStream = new BufferedInputStream(new FileInputStream(TEST_WAV_FILE));
         FileMetadata metadata = FileMetadata.builder()
-            .fileName(FILENAME)
+            .fileName(FILENAME_WAV)
             .build();
         mediaStorage.putMedia(LOCATION, new MediaContent(mediaStream, metadata));
         mediaStream.close();
 
         FileMetadata metadata2 = mediaStorage.getMediaMetadata(LOCATION);
-        verifyMetadata(metadata2);
+        verifyWavMetadata(metadata2);
         MediaContent fetched = mediaStorage.getMedia(LOCATION);
 
         assertNotNull(fetched);
@@ -116,13 +119,51 @@ public class DiskCachingMediaStorageIntegTest {
         assertEquals(fetched.metadata().lengthBytes(), fetchedBytes.length);
         assertArrayEquals(originalBytes, fetchedBytes);
         fetched.stream().close();
-        verifyMetadata(fetched.metadata());
+        verifyWavMetadata(fetched.metadata());
     }
 
-    private void verifyMetadata(FileMetadata metadata) {
-        assertEquals(FILENAME, metadata.fileName());
+    @Test
+    public void testMp3EndToEnd() throws Exception {
+        InputStream mediaStream = new BufferedInputStream(new FileInputStream(TestData.SUNSHINE_LEAD_MP3));
+        byte[] originalBytes = IOUtils.toByteArray(mediaStream);
+        mediaStream = new BufferedInputStream(new FileInputStream(TestData.SUNSHINE_LEAD_MP3));
+        FileMetadata metadata = FileMetadata.builder()
+            .fileName(FILENAME_MP3)
+            .build();
+        mediaStorage.putMedia(LOCATION, new MediaContent(mediaStream, metadata));
+        mediaStream.close();
+
+        FileMetadata metadata2 = mediaStorage.getMediaMetadata(LOCATION);
+        verifyMp3Metadata(metadata2);
+        MediaContent fetched = mediaStorage.getMedia(LOCATION);
+
+        assertNotNull(fetched);
+        assertNotNull(fetched.metadata());
+        assertNotNull(fetched.stream());
+        AudioFileFormat format = AudioSystem.getAudioFileFormat(fetched.stream());
+        System.out.printf("AudioFileFormat for %s: %s\n", fetched.metadata().fileName(), JsonUtils.toJson(format));
+        // AudioFormat.equals() is identity-based :(
+        // assertEquals(AudioFormats.MONO_PCM_48KHZ.toString(), format.getFormat().toString());
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        fetched.stream().transferTo(baos);
+        byte[] fetchedBytes = baos.toByteArray();
+        assertEquals(fetched.metadata().lengthBytes(), fetchedBytes.length);
+        assertArrayEquals(originalBytes, fetchedBytes);
+        fetched.stream().close();
+        verifyMp3Metadata(fetched.metadata());
+    }
+
+    private void verifyWavMetadata(FileMetadata metadata) {
+        assertEquals(FILENAME_WAV, metadata.fileName());
         assertEquals(AudioFormats.WAV_TYPE, metadata.contentType());
         assertEquals(11814080, metadata.lengthBytes());
+        assertThat(metadata.etag(), not(emptyString()));
+    }
+
+    private void verifyMp3Metadata(FileMetadata metadata) {
+        assertEquals(FILENAME_MP3, metadata.fileName());
+        assertEquals(AudioFormats.MP3_TYPE, metadata.contentType());
+        assertEquals(985004, metadata.lengthBytes());
         assertThat(metadata.etag(), not(emptyString()));
     }
 

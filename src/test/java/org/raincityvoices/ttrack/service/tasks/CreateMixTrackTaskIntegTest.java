@@ -1,11 +1,11 @@
 package org.raincityvoices.ttrack.service.tasks;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.Instant;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -90,5 +90,13 @@ public class CreateMixTrackTaskIntegTest {
         assertTrue(mixTrack.hasMedia());
         assertEquals(partTrack.getDurationSec() * 1 / mixTrack.getSpeedFactor(), mixTrack.getDurationSec(), 1.0);
         assertEquals(null, mixTrack.getCurrentTaskId());
+    }
+
+    @Test
+    public void testRefreshMix() throws InterruptedException, ExecutionException {
+        AudioTrackDTO mixTrack = songStorage.describeMix(TestData.SUNSHINE_SONG_ID, "Lead Missing");
+        Future<AudioTrackDTO> future = manager.scheduleCreateMixTrackTask(mixTrack);
+        Thread.sleep(2000);
+        future.get();
     }
 }

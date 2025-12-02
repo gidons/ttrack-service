@@ -33,8 +33,8 @@ public class DefaultFileManager implements FileManager {
         return AudioSystem.getAudioInputStream(file);
     }
     @Override
-    public void writeWavAudio(AudioInputStream audioStream, File file) throws IOException {
-        AudioSystem.write(audioStream, Type.WAVE, file);
+    public void writeAudio(AudioInputStream audioStream, Type fileType, File file) throws IOException {
+        AudioSystem.write(audioStream, fileType, file);
     }
     @Override
     public boolean exists(File file) {

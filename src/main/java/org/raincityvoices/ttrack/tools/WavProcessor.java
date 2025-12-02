@@ -2,6 +2,7 @@ package org.raincityvoices.ttrack.tools;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.System.Logger.Level;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -22,9 +23,11 @@ import org.raincityvoices.ttrack.service.audio.TarsosUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
+import org.raincityvoices.ttrack.service.util.JsonUtils;
 
 import com.azure.cosmos.implementation.guava25.collect.ImmutableList;
 
+import javazoom.spi.mpeg.sampled.file.MpegFileFormatType;
 import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -33,6 +36,8 @@ import picocli.CommandLine.Parameters;
 
 @Slf4j
 public class WavProcessor {
+
+    private static final System.Logger syslog = System.getLogger(WavProcessor.class.getName());
 
     @Command(name = "info", description = "Display information about a WAV file")
     public static class FileInfo implements Callable<Integer> {
@@ -86,13 +91,26 @@ public class WavProcessor {
                 log.error("Input file has only {} channels", numChannels);
                 return 2;
             }
-            AudioInputStream decoded = AudioSystem.getAudioInputStream(AudioFormats.toPcm(format), in);
-            ChannelExtractingStream stream = new ChannelExtractingStream(decoded, index, debugSettings);
-            log.info("Writing output to " + outFile);
-            AudioSystem.write(stream, Type.WAVE, outFile);
+            AudioInputStream decoded = AudioFormats.toPcmStream(in);
+            ChannelExtractingStream extractingStream = new ChannelExtractingStream(decoded, index, debugSettings);
+            writeAudio(extractingStream, outFile);
             return 0;
         }
+    }
 
+    private static void writeAudio(AudioInputStream stream, File outFile) throws IOException {
+        final AudioInputStream outStream;
+        AudioFileFormat.Type outputType;
+        if (outFile.getName().endsWith(AudioFormats.MP3_EXT)) {
+            outputType = MpegFileFormatType.MP3;
+            outStream = AudioFormats.toMp3Stream(stream);
+        } else {
+            outputType = Type.WAVE;
+            outStream = stream;
+        }
+        syslog.log(Level.INFO, "Output stream format: " + JsonUtils.toJson(outStream.getFormat()));
+        log.info("Writing output to " + outFile);
+        AudioSystem.write(outStream, outputType, outFile);
     }
 
     @SuppressWarnings("null")
@@ -121,7 +139,7 @@ public class WavProcessor {
 
         @Override
         public Integer call() throws Exception {
-            AudioInputStream in = AudioSystem.getAudioInputStream(inFile);
+            AudioInputStream in = AudioFormats.toPcmStream(AudioSystem.getAudioInputStream(inFile));
             try (TarsosStreamAdapter tarsosAdapter = new TarsosStreamAdapter(TarsosUtils.getPitchAndSpeedDispatcher(in, pitchShift, speedFactor))) {
                 AudioInputStream processingStream = tarsosAdapter.getAudioInputStream();
                 AudioSystem.write(processingStream, Type.WAVE, outFile);
@@ -152,13 +170,13 @@ public class WavProcessor {
             log.info("Mix: {}", mix);
             AudioInputStream inStreams[] = inFilesInOrder.stream().map(f -> openSafely(f)).toArray(n -> new AudioInputStream[n]);
             AudioInputStream mixingStream = AudioMixingStream.create(inStreams, mix, 1024);
-            AudioSystem.write(mixingStream, Type.WAVE, outFile);
+            writeAudio(mixingStream, outFile);
             return 0;
         }
 
         private static AudioInputStream openSafely(File inFile) {
             try {
-                return AudioSystem.getAudioInputStream(inFile);
+                return AudioFormats.toPcmStream(AudioSystem.getAudioInputStream(inFile));
             } catch (UnsupportedAudioFileException | IOException e) {
                 throw new RuntimeException("Failed to open input file " + inFile, e);
             }
