@@ -54,7 +54,7 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
             switch (e.getStatusCode()) {
                 case 304: 
                     log.info("ETag hasn't changed.");
-                    return currentMetadata;
+                    return fetchMetadata(location);
                 case 404:
                     log.info("Blob does not exist.");
                     return null;

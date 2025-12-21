@@ -3,6 +3,7 @@ package org.raincityvoices.ttrack.service.tasks;
 import java.io.IOException;
 import java.util.List;
 
+import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -19,7 +20,9 @@ import org.raincityvoices.ttrack.service.storage.MediaContent;
 
 import com.azure.cosmos.implementation.guava25.base.Preconditions;
 
+import javazoom.spi.mpeg.sampled.file.MpegFileFormatType;
 import lombok.extern.slf4j.Slf4j;
+import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 
 @Slf4j
 public abstract class MixTrackTaskBase extends AudioTrackTask {
@@ -32,10 +35,17 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
 
     @Override
     protected void doInitialize() throws Exception {
-        
     }
 
     protected final AudioTrackDTO mixTrack() { return track(); }
+
+    protected boolean isMp3() {
+        return track().getAudioMix().numOutputs() <= 2;
+    }
+
+    protected AudioFileFormat.Type targetFileType() {
+        return isMp3() ? MpegAudioFileWriter.MP3 : AudioFileFormat.Type.WAVE;
+    }
 
     protected AudioTrackDTO performMix() throws UnsupportedAudioFileException, IOException {
         MixInfo mixInfo = SongController.toMixTrack(track()).mixInfo();
@@ -62,7 +72,7 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
             }
 
             AudioMixingStream mixingStream = AudioMixingStream.create(inputStreams, mixTrack().getAudioMix());
-            AudioTrackDTO uploaded = uploadStream(mixingStream, generateMixFileName());
+            AudioTrackDTO uploaded = uploadStream(mixingStream, generateMixFileName(), targetFileType());
             log.info("Uploaded mixed audio to {}", uploaded.getMediaLocation());
             return uploaded;
         } finally {
@@ -76,6 +86,6 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
     }
 
     private String generateMixFileName() {
-        return String.format("%s - %s%s", song().getTrackPrefix(), mixTrack().getId(), AudioFormats.MP3_EXT);
+        return String.format("%s - %s.%s", song().getTrackPrefix(), mixTrack().getId(), targetFileType().getExtension());
     }
 }

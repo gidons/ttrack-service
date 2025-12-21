@@ -53,7 +53,7 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
      * If this is bigger than the total MP3 track size we can avoid reallocation.
      * However, it's probably not a big deal if it isn't.
      */
-    private static final int DEFAULT_MP3_BUF_SIZE = 4000000;
+    private static final int DEFAULT_AUDIO_BUF_SIZE = 4000000;
     private static final Duration MAX_WAIT_FOR_LOCK = Duration.ofSeconds(30);
     private static final Duration LOCK_POLL_INTERVAL = Duration.ofMillis(3000);
 
@@ -106,11 +106,11 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
         this.clock = Clock.systemUTC();
     }
 
-    private String trackFqId() {
+    protected String trackFqId() {
         return AudioTrackDTO.fqId(songId, trackId);
     }
 
-    private String fqId() {
+    protected String fqId() {
         return String.format("%s:%s", trackFqId(), taskId());
     }
 
@@ -305,18 +305,20 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
         return dto;
     }
 
-    protected AudioTrackDTO uploadStream(AudioInputStream stream, String originalFileName) {
+    protected AudioTrackDTO uploadStream(AudioInputStream stream, String originalFileName, AudioFileFormat.Type targetFormat) {
         if (track().getMediaLocation() == null) {
             track().setMediaLocation(mediaStorage.locationFor(new SongId(track.getSongId()), track.getId()));
         }
         log.info("Processing audio to upload to {}", track().getMediaLocation());
-        AudioInputStream mp3Stream = AudioFormats.toMp3Stream(stream);
-        ByteArrayOutputStream baos = new ByteArrayOutputStream(DEFAULT_MP3_BUF_SIZE);
-        try /* (Temp.File tempMp3 = Temp.file("mix", ".mp3")) */ {
-            log.info("Uploading MP3 audio to {}...", track.getMediaLocation());
-            AudioSystem.write(mp3Stream, MpegAudioFileWriter.MP3, baos);
-            InputStream mediaStream = new ByteArrayInputStream(baos.toByteArray());
+
+        try {
+            log.info("Writing audio as {}...", targetFormat);
+            AudioInputStream formattedStream = AudioFormats.toTargetFormat(stream, targetFormat);
             FileMetadata metadata = FileMetadata.builder().fileName(originalFileName).build();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream(DEFAULT_AUDIO_BUF_SIZE);
+            fileManager.writeAudio(formattedStream, targetFormat, baos);
+            InputStream mediaStream = new ByteArrayInputStream(baos.toByteArray());
+            log.info("Uploading audio to {}...", track.getMediaLocation());
             mediaStorage().putMedia(track().getMediaLocation(), new MediaContent(mediaStream, metadata));
             log.info("Audio uploaded.");
         } catch (Exception e) {

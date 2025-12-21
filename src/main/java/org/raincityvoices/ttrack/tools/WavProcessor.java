@@ -21,8 +21,8 @@ import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter;
 import org.raincityvoices.ttrack.service.audio.TarsosUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
+import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
-import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 
 import com.azure.cosmos.implementation.guava25.collect.ImmutableList;
@@ -166,7 +166,8 @@ public class WavProcessor {
             log.info("Input parts: {}", parts);
             List<File> inFilesInOrder = parts.stream().map(AudioPart::name).map(inFileByPartName::get).toList();
             log.info("Input files: {}", inFilesInOrder);
-            StereoMix mix = MixUtils.parseStereoMix(mixName, parts);
+            AudioMix mix;
+            mix = MixUtils.parseMix(mixName, parts);
             log.info("Mix: {}", mix);
             AudioInputStream inStreams[] = inFilesInOrder.stream().map(f -> openSafely(f)).toArray(n -> new AudioInputStream[n]);
             AudioInputStream mixingStream = AudioMixingStream.create(inStreams, mix, 1024);

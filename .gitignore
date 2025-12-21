@@ -65,3 +65,4 @@ build/
 /terraform/terraform.tfstate*
 cache
 LOG_FILE_IS_UNDEFINED
+**/.DS_Store

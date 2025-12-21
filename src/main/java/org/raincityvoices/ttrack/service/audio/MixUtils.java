@@ -15,6 +15,8 @@ import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.api.MixInfo;
+import org.raincityvoices.ttrack.service.audio.model.AllPartsMix;
+import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
@@ -50,20 +52,27 @@ public class MixUtils {
             names.add(duet.stream().map(AudioPart::name).collect(Collectors.joining(" ")) + " Duet");
         }
 
-        return names.build().stream().map(n -> MixUtils.parseStereoMixInfo(n, parts)).toList();
+        return names.build().stream().map(n -> MixUtils.parseMixInfo(n, parts)).toList();
     }
 
     // public static List<MixInfo> getMixPackage(String description, int pitchShift, double speedFactor) {
     // }
 
-    public static MixInfo parseStereoMixInfo(String description, List<AudioPart> parts) {
+    
+    public static MixInfo parseMixInfo(String description, List<AudioPart> parts) {
         return MixInfo.builder()
             .name(description)
             .parts(parts)
-            .mix(parseStereoMix(description, parts))
+            .mix(parseMix(description, parts))
             .build();
     }
-
+    
+    public static AudioMix parseMix(String description, List<AudioPart> parts) {
+        if (description.equalsIgnoreCase("all")) {
+            return allChannelMix(parts.size());
+        }
+        return parseStereoMix(description, parts);
+    }
     /** 
      * Supported mix description formats:
      * - "full" or "full <whatever>"
@@ -194,6 +203,10 @@ public class MixUtils {
         // float factor = 1.0f / numParts;
         // Arrays.fill(factors, factor);
         // return factors;
+    }
+
+    public static AudioMix allChannelMix(final int numParts) {
+        return new AllPartsMix(numParts);
     }
 
     public static void logBuffer(ByteBuffer buf, String name) {

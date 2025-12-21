@@ -32,7 +32,7 @@
   <logger name="org.raincityvoices.ttrack.service.AudioTrackTask" level="DEBUG"/>
   <logger name="org.raincityvoices.ttrack.service.CreateMixTrackTask" level="DEBUG"/>
   <logger name="org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter" level="INFO"/>
-  <logger name="org.tritonus" level="TRACE"/>
+  <logger name="org.tritonus" level="WARN"/>
 
   <logger name="org.zalando.logbook" level="TRACE">
     <appender-ref ref="REQUEST_LOG"/>

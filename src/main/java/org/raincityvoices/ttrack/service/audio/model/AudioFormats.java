@@ -4,10 +4,13 @@ import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.AudioFormat.Encoding;
 
 import com.google.common.base.Preconditions;
 
+import javazoom.spi.mpeg.sampled.file.MpegAudioFileFormat;
 import vavi.sound.sampled.mp3.Mp3LameFormatConversionProvider;
+import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 
 public class AudioFormats {
 
@@ -53,11 +56,25 @@ public class AudioFormats {
     }
 
     public static AudioInputStream toPcmStream(AudioInputStream original) {
-        return AudioSystem.getAudioInputStream(toPcm(original.getFormat()), original);
+        return Encoding.PCM_SIGNED.equals(original.getFormat().getEncoding())
+            ? original
+            : AudioSystem.getAudioInputStream(toPcm(original.getFormat()), original);
     }
 
     public static AudioInputStream toMp3Stream(AudioInputStream original) {
-        return AudioSystem.getAudioInputStream(toMp3(original.getFormat()), original);
+        return Mp3LameFormatConversionProvider.MPEG1L3.equals(original.getFormat().getEncoding())
+            ? original
+            : AudioSystem.getAudioInputStream(toMp3(original.getFormat()), original);
+    }
+
+    public static AudioInputStream toTargetFormat(AudioInputStream original, AudioFileFormat.Type formatType) {
+        if (AudioFileFormat.Type.WAVE.equals(formatType)) {
+            return toPcmStream(original);
+        }
+        if (MpegAudioFileWriter.MP3.equals(formatType)) {
+            return toMp3Stream(original);
+        }
+        throw new IllegalArgumentException("Unsupported target format type: " + formatType);
     }
 
     /**

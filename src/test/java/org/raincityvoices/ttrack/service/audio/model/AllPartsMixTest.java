@@ -18,7 +18,7 @@ public class AllPartsMixTest {
 
     @Test
     void testRoundTrip() throws JsonProcessingException {
-        AllPartsMix mix = new AllPartsMix(TestData.BBS_4_PARTS);
+        AllPartsMix mix = new AllPartsMix(4);
         String json = MAPPER.writeValueAsString(mix);
         log.info("JSON: " + json);
         // fail();

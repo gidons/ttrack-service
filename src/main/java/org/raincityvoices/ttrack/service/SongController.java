@@ -50,6 +50,7 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.DefaultUriBuilderFactory.EncodingMode;
 
 import com.azure.core.annotation.QueryParam;
+import com.google.common.collect.ImmutableList;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class SongController {
 
+    /**
+     * The default mix that has one part per channel.
+     */
+    public static final String ALL_CHANNEL_MIX_ID = "All";
     private final SongStorage songStorage;
     private final MediaStorage mediaStorage;
     private final AudioTrackTaskManager taskManager;
@@ -84,6 +89,7 @@ public class SongController {
     public Song createSong(@RequestBody Song song) {
         SongDTO dto = SongDTO.fromSong(song);
         songStorage.writeSong(dto);
+        updateAllChannelMix(song.getId().value());
         return dto.toSong();
     }
 
@@ -138,7 +144,7 @@ public class SongController {
     }
 
     @PutMapping({"/{id}/parts", "/{id}/parts/"})
-    public void uploadMediaForMultipleParts(@PathVariable("id") SongId songId, @QueryParam("overwrite") boolean overwrite,
+    public List<AudioTrackDTO> uploadMediaForMultipleParts(@PathVariable("id") SongId songId, @QueryParam("overwrite") boolean overwrite,
                                             @RequestParam Map<String, MultipartFile> fileFields, 
                                             @RequestParam Map<String, String> otherFields) throws Exception {
         String[] partNames = otherFields.keySet().stream()
@@ -156,19 +162,22 @@ public class SongController {
         if (files.length != partNames.length) {
             throw new BadRequestException("Request specifies a different number of files (" + files.length +") and part names (" + partNames.length + ")");
         }
+        ImmutableList.Builder<AudioTrackDTO> output = ImmutableList.builder();
         for (int i = 0; i < files.length; ++i) {
             log.info("Uploading {} as part {}", files[i].getOriginalFilename(), partNames[i]);
             AudioTrackDTO track = uploadOnePart(songId.value(), partNames[i], overwrite, files[i]);
-            // TODO [SCRUM-28] these tasks are doing a lot of repetitive work refreshing mixes.
-            taskManager.scheduleProcessUploadedTrackTask(track);
+            output.add(track);
         }
+        AudioTrackDTO allChannelTrack = updateAllChannelMix(songId.value());
+        taskManager.scheduleRefreshAllMixesTask(allChannelTrack);
+        return output.build();
     }
 
     @PutMapping("/{id}/parts/{partName}")
     public String uploadMediaForPart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part, 
                                      @QueryParam("overwrite") boolean overwrite, @RequestParam MultipartFile audioFile) throws Exception {
         final AudioTrackDTO track = uploadOnePart(songId.value(), part.name(), overwrite, audioFile);
-        taskManager.scheduleProcessUploadedTrackTask(track);
+        updateAllChannelMix(songId.value());
         return part.name();
     }
 
@@ -186,12 +195,13 @@ public class SongController {
                     .songId(songId)
                     .id(part)
                     .build();
+            songStorage.writeTrack(track);
         }
-        songStorage.writeTrack(track);
         String mediaLocation = mediaStorage.locationFor(songId, track.getId());
         mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
         track.setMediaLocation(mediaLocation);
         songStorage.writeTrack(track);
+        taskManager.scheduleProcessUploadedTrackTask(track);
         return track;
     }
 
@@ -388,6 +398,27 @@ public class SongController {
         List<AudioTrackDTO> partTracks = songStorage.listPartsForSong(songId.value());
         List<AudioPart> parts = partTracks.stream().map(dto -> toPartTrack(dto)).map(PartTrack::part).toList();
         return MixUtils.getParseableMixes(parts);
+    }
+
+    private AudioTrackDTO updateAllChannelMix(String songId) {
+        AudioTrackDTO dto = songStorage.describeMix(songId, ALL_CHANNEL_MIX_ID);
+        List<AudioTrackDTO> partTracks = songStorage.listPartsForSong(songId);
+        List<String> partNames = partTracks.stream().map(t -> t.getId()).toList();
+        if (dto == null) {
+            dto = AudioTrackDTO.builder()
+                .songId(songId)
+                .id(ALL_CHANNEL_MIX_ID)
+                .parts(partNames)
+                .audioMix(MixUtils.allChannelMix(partNames.size()))
+                .pitchShift(0)
+                .speedFactor(1.0)
+                .build();
+        } else {
+            dto.setParts(partNames);
+            dto.setAudioMix(MixUtils.allChannelMix(partNames.size()));
+        }
+        songStorage.writeTrack(dto);
+        return dto;
     }
 
     private AudioTrackDTO fetchTrackOrThrowNotFound(SongId songId, AudioPart part) {

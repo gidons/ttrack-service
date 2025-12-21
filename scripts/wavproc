@@ -33,7 +33,7 @@ for a in "$@"; do
   fi
 done
 
-cd "$PROJECT_ROOT" || exit 2
+#cd "$PROJECT_ROOT" || exit 2
 
 echo "Running: mvn exec:java -Dexec.mainClass=\"${MAIN_CLASS}\" -Dexec.args=\"${ARGS_STR}\""
 
@@ -43,5 +43,5 @@ if [[ ! -x "$MVN" ]]; then
   MVN="mvn"
 fi
 
-${MVN} exec:java -Dexec.mainClass="${MAIN_CLASS}" -Dexec.args="${ARGS_STR}"
+${MVN} -f ${PROJECT_ROOT} exec:java -Dexec.mainClass="${MAIN_CLASS}" -Dexec.args="${ARGS_STR}"
 exit $?

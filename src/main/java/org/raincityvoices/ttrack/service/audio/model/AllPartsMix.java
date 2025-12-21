@@ -1,6 +1,7 @@
 package org.raincityvoices.ttrack.service.audio.model;
 
 import java.nio.FloatBuffer;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -15,24 +16,27 @@ import lombok.experimental.Accessors;
 @Getter(onMethod=@__(@JsonProperty()))
 public class AllPartsMix implements AudioMix {
 
-    ImmutableList<AudioPart> parts;
+    int numParts;
 
     @JsonCreator
-    public AllPartsMix(Iterable<AudioPart> parts) {
-        this.parts = ImmutableList.copyOf(parts);
+    public AllPartsMix(int numParts) {
+        this.numParts = numParts;
     }
 
     @Override
-    public int numInputs() {
-        return parts.size();
-    }
+    public int numInputs() { return numParts; }
 
     @Override
-    public int numOutputs() { return 0; }
+    public int numOutputs() { return numParts; }
 
     @Override
     public void mix(FloatBuffer[] ins, FloatBuffer out) {
-        throw new UnsupportedOperationException("AllPartsMix is a read-only description of all parts, not a real mix");
+        int leastRemaining = Stream.of(ins).mapToInt(FloatBuffer::remaining).min().getAsInt();
+        while (leastRemaining-- > 0) {
+            for (int i = 0; i < numInputs(); ++i) {
+                out.put(ins[i].get());
+            }
+        }                
     }
 
 }

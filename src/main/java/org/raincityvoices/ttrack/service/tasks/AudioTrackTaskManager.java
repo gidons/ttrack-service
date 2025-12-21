@@ -4,6 +4,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.AudioDebugger;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
@@ -42,6 +43,10 @@ public class AudioTrackTaskManager {
 
     public Future<AudioTrackDTO> scheduleCreateMixTrackTask(AudioTrackDTO mixTrack) {
         return schedule(new CreateMixTrackTask(mixTrack, this));
+    }
+
+    public Future<AudioTrackDTO> scheduleRefreshAllMixesTask(AudioTrackDTO allChannelsTrack) {
+        return schedule(new RefreshAllMixesTask(allChannelsTrack, this));
     }
 
     private <T extends AudioTrackTask> Future<AudioTrackDTO> schedule(T task) {

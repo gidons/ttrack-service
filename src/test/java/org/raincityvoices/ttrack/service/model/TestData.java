@@ -54,7 +54,7 @@ public class TestData {
     }
 
     public static AudioTrackDTO mixTrackDto(String name) {
-        MixInfo mixInfo = MixUtils.parseStereoMixInfo(name, BBS_4_PARTS);
+        MixInfo mixInfo = MixUtils.parseMixInfo(name, BBS_4_PARTS);
         return AudioTrackDTO.builder()
             .songId(SUNSHINE_SONG_ID)
             .id(name)

@@ -25,11 +25,12 @@ public interface FileManager {
     InputStream getInputStream(File file) throws IOException;
     OutputStream getOutputStream(File file) throws IOException;
     AudioFileFormat getAudioFileFormat(File file) throws IOException, UnsupportedAudioFileException;
-    void writeAudio(AudioInputStream audioStream, AudioFileFormat.Type fileType, File file) throws IOException;
-    default void writeWavAudio(AudioInputStream audioStream, File file) throws IOException {
+    void writeAudio(AudioInputStream audioStream, AudioFileFormat.Type fileType, File file) throws IOException, UnsupportedAudioFileException;
+    void writeAudio(AudioInputStream audioStream, AudioFileFormat.Type fileType, OutputStream out) throws IOException, UnsupportedAudioFileException;
+    default void writeWavAudio(AudioInputStream audioStream, File file) throws IOException, UnsupportedAudioFileException {
         writeAudio(audioStream, Type.WAVE, file);
     }
-    default void writeMp3Audio(AudioInputStream audioStream, File file) throws IOException {
+    default void writeMp3Audio(AudioInputStream audioStream, File file) throws IOException, UnsupportedAudioFileException {
         writeAudio(audioStream, MpegFileFormatType.MP3, file);
     }
     boolean exists(File file);

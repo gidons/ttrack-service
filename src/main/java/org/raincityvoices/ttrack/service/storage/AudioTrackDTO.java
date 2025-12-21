@@ -70,7 +70,7 @@ public class AudioTrackDTO extends BaseDTO {
     @Transient
     public boolean isPartTrack() { return parts == null && audioMix == null; }
     @Transient
-    public boolean isMixTrack() { return CollectionUtils.isNotEmpty(parts) && audioMix != null; }
+    public boolean isMixTrack() { return parts != null && audioMix != null; }
     @Transient
     public boolean isValid() { return songId != null && id != null && isPartTrack() || isMixTrack(); }
     @Transient

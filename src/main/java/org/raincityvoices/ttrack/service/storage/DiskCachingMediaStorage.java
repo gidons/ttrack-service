@@ -109,8 +109,16 @@ public class DiskCachingMediaStorage implements MediaStorage {
                     return;
                 }
                 if (remoteMetadata.etag().equals(metadata.etag())) {
-                    log.info("Media for {} has not changed since last downloaded.", mediaLocation);
-                    return;
+                    if (remoteMetadata.lengthBytes() != metadata.lengthBytes()) {
+                        log.warn("Cached media length ({}) is different from remote ({}); last download may have failed. Retrying.",
+                            metadata.lengthBytes(), remoteMetadata.lengthBytes()
+                        );
+                        deleteFromCache();
+                        remoteMetadata = remote.downloadMedia(mediaLocation, FileMetadata.UNKNOWN, downloadFile);
+                    } else {
+                        log.info("Media for {} has not changed since last downloaded.", mediaLocation);
+                        return;
+                    }
                 }
                 log.info("Downloaded media for {} with new ETag {}: creating new local file.", mediaLocation, remoteMetadata.etag());
                 updateLocalFileAndMetadata(downloadFile, remoteMetadata);
@@ -230,6 +238,10 @@ public class DiskCachingMediaStorage implements MediaStorage {
     public void deleteFromCache(String mediaLocation) {
         getClient(mediaLocation).deleteFromCache();
         locationClients.invalidate(mediaLocation);
+    }
+
+    public void clearCache() {
+        
     }
 
     @VisibleForTesting

@@ -26,15 +26,19 @@ public class DefaultFileManager implements FileManager {
     }
     @Override
     public AudioFileFormat getAudioFileFormat(File file) throws IOException, UnsupportedAudioFileException {
-        return AudioSystem.getAudioFileFormat(file);
+        return CustomAudioSystem.getAudioFileFormat(file);
     }
     @Override
     public AudioInputStream getAudioInputStream(File file) throws IOException, UnsupportedAudioFileException {
-        return AudioSystem.getAudioInputStream(file);
+        return CustomAudioSystem.getAudioInputStream(file);
     }
     @Override
-    public void writeAudio(AudioInputStream audioStream, Type fileType, File file) throws IOException {
-        AudioSystem.write(audioStream, fileType, file);
+    public void writeAudio(AudioInputStream audioStream, Type fileType, File file) throws IOException, UnsupportedAudioFileException {
+        CustomAudioSystem.write(audioStream, fileType, file);
+    }
+    @Override
+    public void writeAudio(AudioInputStream audioStream, Type fileType, OutputStream out) throws IOException, UnsupportedAudioFileException {
+        CustomAudioSystem.write(audioStream, fileType, out);
     }
     @Override
     public boolean exists(File file) {

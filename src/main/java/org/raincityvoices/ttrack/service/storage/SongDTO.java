@@ -1,5 +1,7 @@
 package org.raincityvoices.ttrack.service.storage;
 
+import java.beans.Transient;
+
 import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.SongId;
@@ -45,6 +47,7 @@ public class SongDTO extends BaseDTO {
     public String getRowKey() { return ""; }
     public void setRowKey(String rk) { if (!"".equals(rk)) throw new IllegalArgumentException("Unexpected RowKey '" + rk + "' set for SongDTO with ID '" + id + "'; expected empty string"); }
 
+    @Transient
     public String getTrackPrefix() {
         return StringUtils.defaultIfBlank(shortTitle, title);
     }
