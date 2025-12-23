@@ -8,6 +8,8 @@ import com.azure.data.tables.TableClient;
 import com.azure.data.tables.TableClientBuilder;
 import com.azure.identity.AzureCliCredential;
 import com.azure.identity.AzureCliCredentialBuilder;
+import com.azure.identity.DefaultAzureCredential;
+import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 
@@ -30,15 +32,14 @@ public class AzureClients {
     private AzureServiceConfig blobs;
 
     @Bean
-    AzureCliCredential cliCredential() {
-        AzureCliCredential cred = new AzureCliCredentialBuilder().build();
-        return cred;
+    DefaultAzureCredential defaultCredential() {
+        return new DefaultAzureCredentialBuilder().build();
     }
 
     @Bean
     public TableClient songsTableClient() {
         return new TableClientBuilder()
-            .credential(cliCredential())
+            .credential(defaultCredential())
             .endpoint(tables.endpoint)
             .tableName("Songs")
             .buildClient();
@@ -47,7 +48,7 @@ public class AzureClients {
     @Bean
     public TableClient asyncTasksTableClient() {
         return new TableClientBuilder()
-            .credential(cliCredential())
+            .credential(defaultCredential())
             .endpoint(tables.endpoint)
             .tableName("AsyncTasks")
             .buildClient();
@@ -56,7 +57,7 @@ public class AzureClients {
     @Bean
     public BlobContainerClient mediaContainerClient() {
         return new BlobContainerClientBuilder()
-            .credential(cliCredential())
+            .credential(defaultCredential())
             .endpoint(blobs.endpoint)
             .containerName("song-media")
             .buildClient();
@@ -65,7 +66,7 @@ public class AzureClients {
     @Bean
     public BlobContainerClient dataContainerClient() {
         return new BlobContainerClientBuilder()
-            .credential(cliCredential())
+            .credential(defaultCredential())
             .endpoint(blobs.endpoint)
             .containerName("song-timed-data")
             .buildClient();

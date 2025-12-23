@@ -93,6 +93,10 @@
 			<artifactId>azure-data-tables</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.azure</groupId>
+			<artifactId>azure-identity</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.azure.spring</groupId>
 			<artifactId>spring-cloud-azure-starter-storage</artifactId>
 		</dependency>

@@ -61,7 +61,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @CrossOrigin
-@RequestMapping(path = "/songs", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(path = {"/songs", "/songs/"}, produces = MediaType.APPLICATION_JSON_VALUE)
 @Slf4j
 @RequiredArgsConstructor
 public class SongController {
