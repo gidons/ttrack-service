@@ -35,11 +35,8 @@ public class BlobTimedDataStorageIntegTest {
 
     @Test
     public void testEndToEnd() {
-        log.info("*********************************************************");
-        log.info("STARTING TEST");
-        log.info("*********************************************************");
-        // List<TimedTextDTO> existing = storage.getAllDataForSong(SONG_ID);
-        // assertEquals(List.of(), existing);
+        List<TimedTextDTO> existing = storage.getAllDataForSong(SONG_ID);
+        assertEquals(List.of(), existing);
         TimedTextDTO dto1 = TimedTextDTO.builder()
             .type(DATA_TYPE_1)
             .parts(new String[] { "Bass", "Lead" })
@@ -68,7 +65,7 @@ public class BlobTimedDataStorageIntegTest {
     }
 
     private void cleanup() {
-        // storage.deleteData(SONG_ID, DATA_TYPE_1);
-        // storage.deleteData(SONG_ID, DATA_TYPE_2);
+        storage.deleteData(SONG_ID, DATA_TYPE_1);
+        storage.deleteData(SONG_ID, DATA_TYPE_2);
     }
 }
