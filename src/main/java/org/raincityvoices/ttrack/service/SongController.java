@@ -107,7 +107,7 @@ public class SongController {
         return dto.toSong();
     }
 
-    @PutMapping("/{id}")
+    @PutMapping({"/{id}","/{id}/"})
     public Song updateSong(@PathVariable("id") String songId, @RequestBody Song song) {
         if (!songId.equals(song.getId().value())) {
             throw new IllegalArgumentException("Song ID in URL does not match ID in body");
@@ -137,7 +137,7 @@ public class SongController {
                         .toList();
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping({"/{id}","/{id}/"})
     public void deleteSong(@PathVariable("id") SongId songId) {
     }
 
@@ -177,7 +177,7 @@ public class SongController {
         return output.build();
     }
 
-    @PutMapping("/{id}/parts/{partName}")
+    @PutMapping({"/{id}/parts/{partName}","/{id}/parts/{partName}/"})
     public String uploadMediaForPart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part, 
                                      @QueryParam("overwrite") boolean overwrite, @RequestParam MultipartFile audioFile) throws Exception {
         final AudioTrackDTO track = uploadOnePart(songId.value(), part.name(), overwrite, audioFile);
@@ -224,18 +224,6 @@ public class SongController {
         downloadTrack(response, trackDto, defaultFileName);
     }
 
-    @GetMapping({"/{id}/text","/{id}/text/"})
-    public TimedTextData getAllTimedData(@PathVariable("id") SongId songId) {
-        List<TimedTextDTO> dtos = dataStorage.getAllDataForSong(songId.value());
-        return Conversions.toTimedTextData(dtos);
-    }
-
-    @PutMapping({"{id}/text", "/{id}/text/"})
-    public void putMethodName(@PathVariable("id") SongId songId, @RequestBody TimedTextData entity) {
-        List<TimedTextDTO> dtos = Conversions.fromTimedTextData(entity);
-        dtos.forEach(dto -> dataStorage.putDataForSong(songId.value(), dto));   
-    }
-
     private void downloadTrack(HttpServletResponse response, AudioTrackDTO trackDto, String defaultFileName) {
         MediaContent content;
         try {
@@ -264,7 +252,7 @@ public class SongController {
         }
     }
 
-    @GetMapping("/{id}/mixes/{mixName}")
+    @GetMapping({"/{id}/mixes/{mixName}","/{id}/mixes/{mixName}/"})
     public MixTrack describeMix(@PathVariable("id") SongId songId, @PathVariable("mixName") String mixName) {
         AudioTrackDTO trackDto = songStorage.describeMix(songId.value(), mixName);
         if (trackDto == null) {
@@ -273,7 +261,7 @@ public class SongController {
         return Conversions.toMixTrack(trackDto);
     }
 
-    @PostMapping("/{id}/mixes/{mixName}/refresh")
+    @PostMapping({"/{id}/mixes/{mixName}/refresh","/{id}/mixes/{mixName}/refresh/"})
     public MixTrack refreshMix(@PathVariable("id") SongId songId, @PathVariable("mixName") String mixName) {
         AudioTrackDTO trackDto = songStorage.describeMix(songId.value(), mixName);
         if (trackDto == null) {
@@ -304,7 +292,7 @@ public class SongController {
         downloadTrack(response, dto, defaultFileName);
     }
 
-    @PostMapping("/{id}/mixes")
+    @PostMapping({"/{id}/mixes", "/{id}/mixes/"})
     public List<MixTrack> createMixTracks(@PathVariable("id") SongId songId, @RequestBody CreateMixRequestBase request,
                                         @QueryParam("overwrite") boolean overwrite) {
         verifySongExists(songId);
@@ -320,6 +308,18 @@ public class SongController {
         } else {
             throw new IllegalStateException("Unexpected request class: " + request.getClass());
         }
+    }
+
+    @GetMapping({"/{id}/text","/{id}/text/"})
+    public TimedTextData getAllTimedData(@PathVariable("id") SongId songId) {
+        List<TimedTextDTO> dtos = dataStorage.getAllDataForSong(songId.value());
+        return Conversions.toTimedTextData(dtos);
+    }
+
+    @PutMapping({"{id}/text", "/{id}/text/"})
+    public void putMethodName(@PathVariable("id") SongId songId, @RequestBody TimedTextData entity) {
+        List<TimedTextDTO> dtos = Conversions.fromTimedTextData(entity);
+        dtos.forEach(dto -> dataStorage.putDataForSong(songId.value(), dto));   
     }
 
     private void verifySongExists(SongId songId) {
