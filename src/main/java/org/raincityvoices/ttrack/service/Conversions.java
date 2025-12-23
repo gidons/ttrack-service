@@ -93,7 +93,8 @@ public class Conversions {
     private static TimedTextData.Entry toTimedTextEntry(TimedTextDTO.Entry e, AudioPart[] parts) {
         Builder<AudioPart, String> text = ImmutableMap.<AudioPart,String>builder();
         for (int i = 0; i < parts.length; ++i) {
-            text.put(parts[i], e.v(i));
+            String value = e.v(i);
+            if (value != null) { text.put(parts[i], value); }
         }
         return TimedTextData.Entry.builder()
             .timeMs(e.t())
