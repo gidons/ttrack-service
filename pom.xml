@@ -263,14 +263,15 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<!--
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<executions>
 					<execution>
 						<goals>
-							<!--<goal>integration-test</goal>-->
-							<!--<goal>verify</goal>-->
+							<goal>integration-test</goal>
+							<goal>verify</goal>
 						</goals>
 					</execution>
 				</executions>
@@ -279,7 +280,7 @@
 						<include>**/*IntegTest.java</include>
 					</includes>
 				</configuration>
-			</plugin>
+			</plugin>-->
 			<plugin>
       			<groupId>com.azure.tools</groupId>
       			<artifactId>azure-sdk-build-tool</artifactId>
