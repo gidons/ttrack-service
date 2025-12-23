@@ -56,6 +56,8 @@ public class CustomAudioSystem {
                 return result;
             } catch(final UnsupportedAudioFileException e) {
                 log.debug("Provider {} failed.", provider.getClass());
+            } catch(final IllegalArgumentException e) {
+                log.debug("Provider {} failed.", provider.getClass());
             }
         }
         throw new UnsupportedAudioFileException("File of unsupported format");

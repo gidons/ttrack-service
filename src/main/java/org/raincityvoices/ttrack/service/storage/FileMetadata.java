@@ -84,7 +84,7 @@ public class FileMetadata {
         }
         return FileMetadata.builder()
                 // AudioFormat.getByteLength() appears to be unreliable.
-                // .lengthBytes(format.getByteLength())
+                .lengthBytes(format.getByteLength())
                 .contentType(contentType)
                 .durationSec(durationSec)
                 .build();

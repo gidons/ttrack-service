@@ -1,10 +1,8 @@
 package org.raincityvoices.ttrack.service.storage;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.stream.IntStream;
 
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -61,16 +59,5 @@ public class FileMetadataTest {
     @Test
     void testFromMultipartFile() {
         // TODO
-    }
-
-    @Test
-    // TODO TEMP TEMP TEMP
-    void testBuffers() {
-        ByteBuffer a = ByteBuffer.allocate(100);
-        ByteBuffer b = ByteBuffer.allocate(100);
-        IntStream.range(0, 100).forEach(i -> a.put((byte)i));
-        IntStream.range(0,20).forEach(i -> b.put((byte)i));
-        b.put(b.position(), a, 0, 80);
-        assertEquals(100, b.position());
     }
 }
