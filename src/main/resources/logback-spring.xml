@@ -28,7 +28,7 @@
   <logger name="org.raincityvoices.ttrack" level="INFO"/>
   <logger name="org.raincityvoices.ttrack.service.storage.mapper" level="WARN"/>
   <logger name="org.raincityvoices.ttrack.service.audio" level="INFO"/>
-  <logger name="org.raincityvoices.ttrack.service.audio.AudioMixingStream" level="INFO"/>
+  <logger name="org.raincityvoices.ttrack.service.audio.AudioMixingeam" level="INFO"/>
   <logger name="org.raincityvoices.ttrack.service.AudioTrackTask" level="DEBUG"/>
   <logger name="org.raincityvoices.ttrack.service.CreateMixTrackTask" level="DEBUG"/>
   <logger name="org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter" level="INFO"/>

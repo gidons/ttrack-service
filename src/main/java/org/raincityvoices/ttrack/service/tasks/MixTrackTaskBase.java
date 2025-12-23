@@ -8,7 +8,7 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import org.raincityvoices.ttrack.service.SongController;
+import org.raincityvoices.ttrack.service.Conversions;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.audio.AudioMixingStream;
 import org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter;
@@ -48,7 +48,7 @@ public abstract class MixTrackTaskBase extends AudioTrackTask {
     }
 
     protected AudioTrackDTO performMix() throws UnsupportedAudioFileException, IOException {
-        MixInfo mixInfo = SongController.toMixTrack(track()).mixInfo();
+        MixInfo mixInfo = Conversions.toMixTrack(track()).mixInfo();
         int numParts = mixInfo.parts().size();
         partTracks = mixInfo.parts().stream().map(AudioPart::value).map(this::describeTrackOrThrow).toList();
         partTracks.forEach(pt -> {

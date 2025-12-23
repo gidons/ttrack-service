@@ -61,4 +61,13 @@ public class AzureClients {
             .containerName("song-media")
             .buildClient();
     }
+
+    @Bean
+    public BlobContainerClient dataContainerClient() {
+        return new BlobContainerClientBuilder()
+            .credential(cliCredential())
+            .endpoint(blobs.endpoint)
+            .containerName("song-timed-data")
+            .buildClient();
+    }
 }

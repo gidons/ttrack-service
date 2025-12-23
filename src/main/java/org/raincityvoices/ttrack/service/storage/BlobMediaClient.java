@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
 
-    private final BlobContainerClient containerClient;
+    private final BlobContainerClient mediaContainerClient;
 
     @Override
     public FileMetadata downloadMedia(String location, FileMetadata currentMetadata, File destination) {
@@ -107,5 +107,5 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
         client(location).deleteIfExists();
     }
 
-    private BlobClient client(String location) { return containerClient.getBlobClient(location); }
+    private BlobClient client(String location) { return mediaContainerClient.getBlobClient(location); }
 }

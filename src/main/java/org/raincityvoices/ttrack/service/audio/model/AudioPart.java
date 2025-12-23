@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class AudioPart extends StringId {
 
     public static AudioPart NONE = new AudioPart();
+    public static AudioPart ALL = new AudioPart("*");
 
     public AudioPart(String value) {
         super(value);

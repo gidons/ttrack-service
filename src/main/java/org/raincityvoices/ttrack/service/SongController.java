@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 
@@ -19,6 +19,7 @@ import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.SongId;
+import org.raincityvoices.ttrack.service.api.TimedTextData;
 import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
@@ -31,6 +32,8 @@ import org.raincityvoices.ttrack.service.storage.MediaContent;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
+import org.raincityvoices.ttrack.service.storage.TimedDataStorage;
+import org.raincityvoices.ttrack.service.storage.TimedTextDTO;
 import org.raincityvoices.ttrack.service.tasks.AudioTrackTaskManager;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
@@ -68,6 +71,7 @@ public class SongController {
      */
     public static final String ALL_CHANNEL_MIX_ID = "All";
     private final SongStorage songStorage;
+    private final TimedDataStorage dataStorage;
     private final MediaStorage mediaStorage;
     private final AudioTrackTaskManager taskManager;
 
@@ -119,7 +123,7 @@ public class SongController {
         log.info("Loaded tracks: ");
         trackDtos.forEach(o -> log.info("Track: {}", o));
         return trackDtos.stream()
-                        .map(dto -> toPartTrack(dto))
+                        .map(dto -> Conversions.toPartTrack(dto))
                         .toList();
     }
 
@@ -129,7 +133,7 @@ public class SongController {
         log.info("Loaded tracks: ");
         trackDtos.forEach(o -> log.info("Track: {}", o));
         return trackDtos.stream()
-                        .map(dto -> toMixTrack(dto))
+                        .map(dto -> Conversions.toMixTrack(dto))
                         .toList();
     }
 
@@ -140,7 +144,7 @@ public class SongController {
     @GetMapping({"/{id}/parts/{partName}","/{id}/parts/{partName}/"})
     public PartTrack describePart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part) {
         AudioTrackDTO dto = songStorage.describePart(songId.value(), part.name());
-        return toPartTrack(dto);
+        return Conversions.toPartTrack(dto);
     }
 
     @PutMapping({"/{id}/parts", "/{id}/parts/"})
@@ -220,6 +224,18 @@ public class SongController {
         downloadTrack(response, trackDto, defaultFileName);
     }
 
+    @GetMapping({"/{id}/text","/{id}/text/"})
+    public TimedTextData getAllTimedData(@PathVariable("id") SongId songId) {
+        List<TimedTextDTO> dtos = dataStorage.getAllDataForSong(songId.value());
+        return Conversions.toTimedTextData(dtos);
+    }
+
+    @PutMapping({"{id}/text", "/{id}/text/"})
+    public void putMethodName(@PathVariable("id") SongId songId, @RequestBody TimedTextData entity) {
+        List<TimedTextDTO> dtos = Conversions.fromTimedTextData(entity);
+        dtos.forEach(dto -> dataStorage.putDataForSong(songId.value(), dto));   
+    }
+
     private void downloadTrack(HttpServletResponse response, AudioTrackDTO trackDto, String defaultFileName) {
         MediaContent content;
         try {
@@ -254,7 +270,7 @@ public class SongController {
         if (trackDto == null) {
             throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
-        return toMixTrack(trackDto);
+        return Conversions.toMixTrack(trackDto);
     }
 
     @PostMapping("/{id}/mixes/{mixName}/refresh")
@@ -264,7 +280,7 @@ public class SongController {
             throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
         taskManager.scheduleCreateMixTrackTask(trackDto);
-        return toMixTrack(trackDto);
+        return Conversions.toMixTrack(trackDto);
     }
 
     @GetMapping({"/{id}/mixes/{mixName}/media","/{id}/mixes/{mixName}/media/"})
@@ -376,7 +392,7 @@ public class SongController {
 
         taskManager.scheduleCreateMixTrackTask(newDto);
 
-        return toMixTrack(newDto);
+        return Conversions.toMixTrack(newDto);
     }
 
     @DeleteMapping("/{id}/mixes/{mixName}")
@@ -396,7 +412,7 @@ public class SongController {
     @GetMapping({"/{id}/defaultMixes","/{id}/defaultMixes/"})
     public List<MixInfo> listDefaultMixesForSong(@PathVariable("id") SongId songId) {
         List<AudioTrackDTO> partTracks = songStorage.listPartsForSong(songId.value());
-        List<AudioPart> parts = partTracks.stream().map(dto -> toPartTrack(dto)).map(PartTrack::part).toList();
+        List<AudioPart> parts = partTracks.stream().map(dto -> Conversions.toPartTrack(dto)).map(PartTrack::part).toList();
         return MixUtils.getParseableMixes(parts);
     }
 
@@ -428,38 +444,6 @@ public class SongController {
             throw new BadRequestException("Part '" + part.name() + "' not found for song '" + songId.value() + "'");
         }
         return dto;
-    }
-
-    // TODO move this somewhere better
-    public static MixTrack toMixTrack(AudioTrackDTO dto) {
-        assert dto.isMixTrack();
-        return MixTrack.builder()
-        .songId(new SongId(dto.getSongId()))
-        .mixInfo(MixInfo.builder()
-        .name(dto.getId())
-        .parts(dto.getParts().stream().map(AudioPart::new).toList())
-        .mix(dto.getAudioMix())
-        .pitchShift(Objects.requireNonNullElse(dto.getPitchShift(), 0))
-        .speedFactor(Objects.requireNonNullElse(dto.getSpeedFactor(), 1.0))
-        .build())
-        .created(dto.getCreated())
-        .updated(dto.getUpdated())
-        .hasMedia(dto.hasMedia())
-        .durationSec(dto.getDurationSec())
-        .build();
-    }
-    
-    // TODO move this somewhere better
-    public static PartTrack toPartTrack(AudioTrackDTO dto) {
-        assert dto.isPartTrack();
-        return PartTrack.builder()
-            .songId(new SongId(dto.getSongId()))
-            .part(new AudioPart(dto.getId()))
-            .created(dto.getCreated())
-            .updated(dto.getUpdated())
-            .hasMedia(dto.hasMedia())
-            .durationSec(dto.getDurationSec())
-            .build();
     }
 
     public static URI songUrl(SongId songId) {

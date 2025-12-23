@@ -1,6 +1,6 @@
 package org.raincityvoices.ttrack.service.tasks;
 
-import org.raincityvoices.ttrack.service.SongController;
+import org.raincityvoices.ttrack.service.Conversions;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 
@@ -12,7 +12,7 @@ public class CreateMixTrackTask extends MixTrackTaskBase {
 
     CreateMixTrackTask(AudioTrackDTO mixTrack, AudioTrackTaskManager factory) {
         super(mixTrack, factory);
-        this.mixInfo = SongController.toMixTrack(mixTrack).mixInfo();
+        this.mixInfo = Conversions.toMixTrack(mixTrack).mixInfo();
     }
 
     @Override

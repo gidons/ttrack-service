@@ -26,7 +26,7 @@
   </root>
   <logger name="com.azure.core" level="INFO"/>
   <logger name="org.raincityvoices.ttrack" level="INFO"/>
-  <logger name="org.raincityvoices.ttrack.service.storage" level="WARN"/>
+  <logger name="org.raincityvoices.ttrack.service.storage" level="INFO"/>
   <logger name="org.raincityvoices.ttrack.service.audio" level="INFO"/>
   <logger name="org.raincityvoices.ttrack.service.audio.AudioMixingStream" level="WARN"/>
   <logger name="org.raincityvoices.ttrack.service.AudioTrackTask" level="DEBUG"/>

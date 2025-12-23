@@ -5,6 +5,7 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioFormat.Encoding;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -43,5 +44,9 @@ public class JsonUtils {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to serialize as JSON", e);
         }
+    }
+
+    public static <T> T fromJson(String json, Class<T> type) throws JsonProcessingException {
+        return MAPPER.readValue(json, type);
     }
 }
