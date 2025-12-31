@@ -22,7 +22,6 @@ import org.raincityvoices.ttrack.service.storage.TimedTextDTO;
 
 import com.azure.cosmos.implementation.guava25.collect.ImmutableMap;
 import com.azure.cosmos.implementation.guava25.collect.ImmutableMap.Builder;
-import com.google.common.collect.ImmutableSet;
 
 /**
  * Conversions between API and internal types.
@@ -42,26 +41,25 @@ public class Conversions {
         return partNames.stream().map(AudioPart::new).toList();
     }
 
-    // TODO move this somewhere better
     public static MixTrack toMixTrack(AudioTrackDTO dto) {
         assert dto.isMixTrack();
         return MixTrack.builder()
-        .songId(new SongId(dto.getSongId()))
-        .mixInfo(MixInfo.builder()
-        .name(dto.getId())
-        .parts(dto.getParts().stream().map(AudioPart::new).toList())
-        .mix(dto.getAudioMix())
-        .pitchShift(Objects.requireNonNullElse(dto.getPitchShift(), 0))
-        .speedFactor(Objects.requireNonNullElse(dto.getSpeedFactor(), 1.0))
-        .build())
-        .created(dto.getCreated())
-        .updated(dto.getUpdated())
-        .hasMedia(dto.hasMedia())
-        .durationSec(dto.getDurationSec())
-        .build();
+            .songId(new SongId(dto.getSongId()))
+            .mixInfo(MixInfo.builder()
+            .name(dto.getId())
+            .parts(dto.getParts().stream().map(AudioPart::new).toList())
+            .mix(dto.getAudioMix())
+            .pitchShift(Objects.requireNonNullElse(dto.getPitchShift(), 0))
+            .speedFactor(Objects.requireNonNullElse(dto.getSpeedFactor(), 1.0))
+            .build())
+            .created(dto.getCreated())
+            .updated(dto.getUpdated())
+            .currentTaskId(dto.getCurrentTaskId())
+            .hasMedia(dto.hasMedia())
+            .durationSec(dto.getDurationSec())
+            .build();
     }
 
-    // TODO move this somewhere better
     public static PartTrack toPartTrack(AudioTrackDTO dto) {
         assert dto.isPartTrack();
         return PartTrack.builder()
@@ -69,6 +67,7 @@ public class Conversions {
             .part(new AudioPart(dto.getId()))
             .created(dto.getCreated())
             .updated(dto.getUpdated())
+            .currentTaskId(dto.getCurrentTaskId())
             .hasMedia(dto.hasMedia())
             .durationSec(dto.getDurationSec())
             .build();

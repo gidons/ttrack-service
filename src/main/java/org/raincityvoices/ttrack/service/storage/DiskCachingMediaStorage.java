@@ -95,7 +95,7 @@ public class DiskCachingMediaStorage implements MediaStorage {
                 stream = fileManager.getInputStream(localFile);
                 return new MediaContent(stream, metadata);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to read media from local file " + localFile);
+                throw new RuntimeException("Failed to read media from local file " + localFile, e);
             }
         }
 

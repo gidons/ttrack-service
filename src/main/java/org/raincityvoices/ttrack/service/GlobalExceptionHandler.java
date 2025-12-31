@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
-    
+/*    
     @ExceptionHandler(NotFoundException.class)
     public String handleNotFoundException(NotFoundException ex) {
         log.warn("NotFoundException: {}", ex.getMessage());
@@ -29,4 +29,5 @@ public class GlobalExceptionHandler {
         log.warn("ConflictException: {}", ex.getMessage());
         return "/error/409";
     }
+*/
 }

@@ -31,6 +31,7 @@ import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
+import org.raincityvoices.ttrack.service.util.Temp;
 import org.slf4j.MDC;
 
 import com.azure.cosmos.implementation.apachecommons.lang.StringUtils;
@@ -311,13 +312,12 @@ public abstract class AudioTrackTask implements Callable<AudioTrackDTO> {
         }
         log.info("Processing audio to upload to {}", track().getMediaLocation());
 
-        try {
+        try(Temp.File tempFile = Temp.file("ttrack-mix-")) {
             log.info("Writing audio as {}...", targetFormat);
             AudioInputStream formattedStream = AudioFormats.toTargetFormat(stream, targetFormat);
             FileMetadata metadata = FileMetadata.builder().fileName(originalFileName).build();
-            ByteArrayOutputStream baos = new ByteArrayOutputStream(DEFAULT_AUDIO_BUF_SIZE);
-            fileManager.writeAudio(formattedStream, targetFormat, baos);
-            InputStream mediaStream = new ByteArrayInputStream(baos.toByteArray());
+            fileManager.writeAudio(formattedStream, targetFormat, tempFile);
+            InputStream mediaStream = new FileInputStream(tempFile);
             log.info("Uploading audio to {}...", track.getMediaLocation());
             mediaStorage().putMedia(track().getMediaLocation(), new MediaContent(mediaStream, metadata));
             log.info("Audio uploaded.");

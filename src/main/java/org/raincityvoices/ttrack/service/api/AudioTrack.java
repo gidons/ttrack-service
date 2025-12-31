@@ -24,6 +24,7 @@ public abstract class AudioTrack {
     Integer durationSec;
     Instant created;
     Instant updated;
+    String currentTaskId;
     @JsonIgnore
     boolean hasMedia;
     @JsonProperty
