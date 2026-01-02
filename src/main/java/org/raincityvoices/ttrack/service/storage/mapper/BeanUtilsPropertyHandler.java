@@ -42,8 +42,8 @@ public class BeanUtilsPropertyHandler<E> implements PropertyHandler<E> {
         if (value == null) {
             return;
         }
-        if (setter() == null) {
-            throw new RuntimeException("No setter for property " + name);
+        if (isReadOnly()) {
+            return;
         }
         try {
             if (value instanceof OffsetDateTime) {

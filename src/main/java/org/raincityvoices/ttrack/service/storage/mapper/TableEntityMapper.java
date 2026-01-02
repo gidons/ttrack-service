@@ -18,11 +18,15 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
+import lombok.Getter;
+import lombok.experimental.PackagePrivate;
+
 /**
  * A serializer/deserializer for table entities, similar to DDB's DynamoDBMapper.
  */
 public class TableEntityMapper<E> {
 
+    @Getter
     private final Class<E> entityClass;
 
     private final ImmutableList<PropertyHandler<E>> propertyHandlers;
@@ -45,12 +49,10 @@ public class TableEntityMapper<E> {
     }
 
     public TableEntity toTableEntity(E pojo) {
-        List<PropertyValue> propertyDescriptors = propertyHandlers.stream()
-                .map(pp -> pp.getProperty(pojo))
-                .toList();
+        List<PropertyValue> propertyValues = getAllPropertyValues(pojo);
         Map<String, Object> properties = new HashMap<>();
-        for (PropertyValue pd : propertyDescriptors) {
-            pd.addToMap(properties);
+        for (PropertyValue pv : propertyValues) {
+            pv.addToMap(properties);
         }
         Object partitionKey = properties.remove(TablesConstants.PARTITION_KEY);
         if (partitionKey == null) {
@@ -65,6 +67,13 @@ public class TableEntityMapper<E> {
         return entity;
     }
 
+    @PackagePrivate List<PropertyValue> getAllPropertyValues(E pojo) {
+        List<PropertyValue> propertyValues = propertyHandlers.stream()
+                .flatMap(pp -> pp.getProperties(pojo).stream())
+                .toList();
+        return propertyValues;
+    }
+
     public E fromTableEntity(TableEntity entity) {
         final E pojo;
         try {
@@ -74,7 +83,7 @@ public class TableEntityMapper<E> {
         }
         for (PropertyHandler<E> ph : propertyHandlers) {
             try {
-                ph.setPropertyFromEntity(pojo, entity);
+                ph.setProperties(pojo, entity);
             } catch(IllegalArgumentException e) {
                 throw new IllegalArgumentException("Unsupported value for property " + ph.getName(), e);
             } catch(Exception e) {
@@ -106,6 +115,9 @@ public class TableEntityMapper<E> {
         }
         if (getter.getAnnotation(Transient.class) != null) {
             return null;
+        }
+        if (getter.getAnnotation(Embedded.class) != null) {
+            return new EmbeddedPropertyHandler<E>(descriptor);
         }
         final String name;
         final String odataType;

@@ -2,6 +2,7 @@ package org.raincityvoices.ttrack.service.storage.mapper;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -29,8 +30,10 @@ import com.google.common.collect.ImmutableMap;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 public class TableEntityMapperTest {
@@ -63,6 +66,8 @@ public class TableEntityMapperTest {
         UUID uuidProp;
         @Getter(onMethod = @__(@Property(type="json")))
         InnerEntity inner;
+        @Getter(onMethod = @__(@Embedded(typePolicy = Embedded.TypePolicy.CLASSNAME_ATTRIBUTE)))
+        EmbeddedEntity embedded;
         List<Integer> numbers;
         @Getter(onMethod = @__(@Timestamp))
         Date updated;
@@ -75,6 +80,25 @@ public class TableEntityMapperTest {
         String someString;
         int someInt;
         List<String> someList;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    static class EmbeddedEntity {
+        String embString;
+        int embInt;
+    }
+
+    @NoArgsConstructor
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    static class EmbeddedSubEntity extends EmbeddedEntity {
+        EmbeddedSubEntity(String s, int i, double d) {
+            super(s, i);
+            this.embDouble = d;
+        }
+        Double embDouble;
     }
 
     private static class TestEntityWithBadKeyProps {
@@ -236,6 +260,7 @@ public class TableEntityMapperTest {
 
     @Test
     void testToTableEntity() throws NoSuchMethodException, SecurityException {
+        EmbeddedEntity embEnt = new EmbeddedSubEntity("foo", 987, 3.14);
         TestEntity pojo = new TestEntity();
         pojo.setId("item1");
         pojo.setIntProp(42);
@@ -244,6 +269,7 @@ public class TableEntityMapperTest {
         pojo.setUuidProp(RANDOM_UUID);
         pojo.setInner(INNER_ENTITY);
         pojo.setUpdated(NOW_DATE);
+        pojo.setEmbedded(embEnt);
 
         TableEntity entity = new TableEntityMapper<>(TestEntity.class).toTableEntity(pojo);
         
@@ -255,9 +281,50 @@ public class TableEntityMapperTest {
             .put("guid", RANDOM_UUID)
             .put("guid@odata.type", "Edm.Binary")
             .put("Inner", INNER_ENTITY_JSON)
+            .put("EmbString", "foo")
+            .put("EmbInt", 987)
+            .put("EmbDouble", 3.14)
+            .put("Embedded" + EmbeddedPropertyHandler.ClassNameAttributeTypeHelper.CLASS_ATTR_SUFFIX, EmbeddedSubEntity.class.getName())
             .put("Timestamp", NOW)
             .build();
         expected.keySet().forEach(propName -> 
             assertEquals(expected.get(propName), entity.getProperties().get(propName), propName));
+        entity.getProperties().keySet().forEach(propName -> 
+            assertThat(expected, hasKey(propName)));
     }
+
+
+    @Test
+    void testFromTableEntity() throws NoSuchMethodException, SecurityException {
+        
+        ImmutableMap<String, Object> props = ImmutableMap.<String, Object>builder()
+            .put("IntProp", 42)
+            .put("StrProp", "hello")
+            .put("guid", RANDOM_UUID)
+            .put("guid@odata.type", "Edm.Binary")
+            .put("Inner", INNER_ENTITY_JSON)
+            .put("EmbString", "foo")
+            .put("EmbDouble", 3.14)
+            .put("Embedded" + EmbeddedPropertyHandler.ClassNameAttributeTypeHelper.CLASS_ATTR_SUFFIX, EmbeddedSubEntity.class.getName())
+            .put("EmbInt", 987)
+            .put("Timestamp", NOW)
+            .build();
+        
+        TableEntity entity = new TableEntity("item1", "row1");
+        entity.setProperties(props);
+
+        TestEntity actual = new TableEntityMapper<>(TestEntity.class).fromTableEntity(entity);
+        TestEntity expected = new TestEntity();
+        expected.setId("item1");
+        expected.setIntProp(42);
+        expected.setSortKey("row1");
+        // We don't set strProp, which is read-only
+        expected.setUuidProp(RANDOM_UUID);
+        expected.setInner(INNER_ENTITY);
+        expected.setUpdated(NOW_DATE);
+        expected.setEmbedded(new EmbeddedSubEntity("foo", 987, 3.14));
+
+        assertEquals(expected, actual);
+    }
+
 }
