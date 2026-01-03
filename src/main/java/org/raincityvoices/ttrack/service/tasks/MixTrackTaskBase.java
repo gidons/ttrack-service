@@ -20,7 +20,6 @@ import org.raincityvoices.ttrack.service.storage.MediaContent;
 
 import com.azure.cosmos.implementation.guava25.base.Preconditions;
 
-import javazoom.spi.mpeg.sampled.file.MpegFileFormatType;
 import lombok.extern.slf4j.Slf4j;
 import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 

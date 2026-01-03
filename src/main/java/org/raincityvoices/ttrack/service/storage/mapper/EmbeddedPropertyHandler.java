@@ -14,13 +14,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import lombok.Getter;
-import lombok.experimental.PackagePrivate;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of PropertyHandler that maps a bean property to any number of row attributes
  * using a recursive call to TableEntityMapper.
  */
+@SuppressWarnings({"rawtypes", "unchecked"})
 @Slf4j
 public class EmbeddedPropertyHandler<E> implements PropertyHandler<E> {
     private interface DynamicTypeHelper {
@@ -109,7 +109,6 @@ public class EmbeddedPropertyHandler<E> implements PropertyHandler<E> {
         }
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
     @Override
     public List<PropertyValue> getProperties(E pojo) {
         Object parentValue;
@@ -117,6 +116,9 @@ public class EmbeddedPropertyHandler<E> implements PropertyHandler<E> {
             parentValue = getter().invoke(pojo);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException("Failed to get value of property using " + getter());
+        }
+        if (parentValue == null) {
+            return List.of();
         }
         try {
             TableEntityMapper subMapper = typeHelper.getMapperForValue(parentValue);

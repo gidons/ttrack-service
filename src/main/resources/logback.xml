@@ -3,7 +3,7 @@
   <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
   <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
   <include resource="org/springframework/boot/logging/logback/file-appender.xml"/>
-  <property name="CONSOLE_LOG_PATTERN" value="%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(%5p){} %clr(${PID:-}){magenta} %clr(--- %esb(){APPLICATION_NAME}%esb{APPLICATION_GROUP}[%15.15t] %X{correlationId}){faint}%clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"/>
+  <property name="CONSOLE_LOG_PATTERN" value="%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(%5p){} %clr(${PID:-}){magenta} %clr(--- %esb(){APPLICATION_NAME}%esb{APPLICATION_GROUP}[%15.15t] [%X{correlationId}]){faint}%clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"/>
   <property name="REQUEST_LOG_FILE" value="/var/ttrack-fs/logs/request.log"/>
   <property name="LOG_FILE" value="/var/ttrack-fs/logs/application.log"/>
 	<appender name="REQUEST_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">

@@ -10,10 +10,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.sound.sampled.AudioFileFormat.Type;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 public class DefaultFileManager implements FileManager {
     @Override

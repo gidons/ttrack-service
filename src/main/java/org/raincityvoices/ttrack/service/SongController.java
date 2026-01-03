@@ -309,6 +309,14 @@ public class SongController {
         }
     }
 
+    @PostMapping("/{id}/zip")
+    public String createMediaZipFile(@PathVariable("id") SongId songId) {
+        //TODO: process POST request
+        
+        return "";
+    }
+    
+
     @GetMapping({"/{id}/text","/{id}/text/"})
     public TimedTextData getAllTimedData(@PathVariable("id") SongId songId) {
         List<TimedTextDTO> dtos = dataStorage.getAllDataForSong(songId.value());

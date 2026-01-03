@@ -2,6 +2,7 @@ package org.raincityvoices.ttrack.service.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
 
 import org.apache.commons.io.FileUtils;
 import org.raincityvoices.ttrack.service.storage.DiskCachingMediaStorage;
@@ -39,4 +40,7 @@ public class ServiceConfig {
     public FileManager fileManager() {
         return new DefaultFileManager();
     }
+
+    @Bean
+    public Clock clock() { return Clock.systemUTC(); }
 }

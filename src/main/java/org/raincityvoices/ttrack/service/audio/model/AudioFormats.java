@@ -2,13 +2,12 @@ package org.raincityvoices.ttrack.service.audio.model;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioFormat.Encoding;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.AudioFormat.Encoding;
 
 import com.google.common.base.Preconditions;
 
-import javazoom.spi.mpeg.sampled.file.MpegAudioFileFormat;
 import vavi.sound.sampled.mp3.Mp3LameFormatConversionProvider;
 import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 

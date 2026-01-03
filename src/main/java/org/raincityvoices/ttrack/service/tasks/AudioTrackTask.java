@@ -1,7 +1,5 @@
 package org.raincityvoices.ttrack.service.tasks;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -14,7 +12,6 @@ import java.util.concurrent.Callable;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.raincityvoices.ttrack.service.api.SongId;
@@ -42,7 +39,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
-import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 
 @Slf4j
 @Getter(AccessLevel.PROTECTED)

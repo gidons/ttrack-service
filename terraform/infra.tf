@@ -32,6 +32,12 @@ resource "azurerm_storage_container" "media_cont" {
   container_access_type = "private"
 }
 
+resource "azurerm_storage_container" "temp_cont" {
+  name                  = "temp-files"
+  storage_account_name    = azurerm_storage_account.storage.name
+  container_access_type = "private"
+}
+
 resource "azurerm_storage_container" "timed_data_cont" {
   name                  = "song-timed-data"
   storage_account_name    = azurerm_storage_account.storage.name
