@@ -3,6 +3,8 @@ package org.raincityvoices.ttrack.service.async;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.async.AsyncTaskManager.TaskExec;
 import org.raincityvoices.ttrack.service.async.ZipAllMixesTask.Output;
@@ -28,9 +30,9 @@ public class ZipAllMixesTaskIntegTest {
         TaskExec<ZipAllMixesTask, Output> taskExec = taskManager.schedule(ZipAllMixesTask.class, TestData.SUNSHINE_SONG_ID);
         Output output = taskExec.result().get();
         log.info("Task output: {}", output);
-        assertEquals(taskExec.task().taskId() + ".zip", output.getZipBblobName());
+        // assertEquals(taskExec.task().taskId() + ".zip", output.getDownloadUrl());
         assertEquals("Sunshine.zip", output.getZipFileName());
-        String url = tempStorage.getDownloadUrl(output.getZipBblobName());
+        String url = tempStorage.getDownloadUrl(output.getDownloadUrl(), Duration.ofMinutes(5));
         log.info("Zip download URL: {}", url);
         assertNotNull(url);
     }

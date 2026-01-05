@@ -20,10 +20,13 @@ import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.api.TimedTextData;
 import org.raincityvoices.ttrack.service.async.AsyncTaskManager;
+import org.raincityvoices.ttrack.service.async.AsyncTaskManager.TaskExec;
 import org.raincityvoices.ttrack.service.async.CreateMixTrackTask;
 import org.raincityvoices.ttrack.service.async.ProcessUploadedPartTask;
 import org.raincityvoices.ttrack.service.async.RefreshAllMixesTask;
 import org.raincityvoices.ttrack.service.async.RefreshMixTrackTask;
+import org.raincityvoices.ttrack.service.async.ZipAllMixesTask;
+import org.raincityvoices.ttrack.service.async.ZipAllMixesTask.Output;
 import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
@@ -316,11 +319,9 @@ public class SongController {
 
     @PostMapping("/{id}/zip")
     public String createMediaZipFile(@PathVariable("id") SongId songId) {
-        //TODO: process POST request
-        
-        return "";
-    }
-    
+        TaskExec<ZipAllMixesTask,Output> exec = taskManager.schedule(ZipAllMixesTask.class, songId.value());
+        return exec.task().taskId();
+    }    
 
     @GetMapping({"/{id}/text","/{id}/text/"})
     public TimedTextData getAllTimedData(@PathVariable("id") SongId songId) {

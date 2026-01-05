@@ -25,8 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class TempFileStorage {
 
-    private static final Duration SAS_TOKEN_TIMEOUT = Duration.ofMinutes(30);
-
     private final BlobContainerClient tempFileContainerClient;
     private final BlobServiceClient blobServiceClient;
 
@@ -39,13 +37,13 @@ public class TempFileStorage {
         client.setHttpHeaders(metadata.toBlobHttpHeaders());
     }
 
-    public String getDownloadUrl(String location) {
+    public String getDownloadUrl(String location, Duration timeout) {
         BlobClient client = client(location);
-        OffsetDateTime expiry = clock.instant().plus(SAS_TOKEN_TIMEOUT).atOffset(ZoneOffset.UTC);
+        OffsetDateTime expiry = clock.instant().plus(timeout).atOffset(ZoneOffset.UTC);
 
         // Create a User Delegation Key so we can sign a SAS using Azure AD credentials
         OffsetDateTime keyStart = clock.instant().atOffset(ZoneOffset.UTC).minusMinutes(5);
-        OffsetDateTime keyExpiry = keyStart.plus(SAS_TOKEN_TIMEOUT).plusMinutes(5);
+        OffsetDateTime keyExpiry = keyStart.plus(timeout).plusMinutes(5);
         UserDelegationKey userDelegationKey = blobServiceClient.getUserDelegationKey(keyStart, keyExpiry);
 
         // Build BlobServiceSasSignatureValues with permissions for the single blob

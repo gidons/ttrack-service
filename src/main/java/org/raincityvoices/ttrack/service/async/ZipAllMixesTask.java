@@ -2,6 +2,7 @@ package org.raincityvoices.ttrack.service.async;
 
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
+import java.time.Duration;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -20,20 +21,19 @@ import org.raincityvoices.ttrack.service.util.PrototypeBean;
 import org.raincityvoices.ttrack.service.util.Temp;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Getter(AccessLevel.PROTECTED)
 @Accessors(fluent = true)
 @PrototypeBean
 public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.Output> {
+
+    private static final Duration DOWNLOAD_URL_EXPIRY = Duration.ofMinutes(60);
 
     @Data
     @EqualsAndHashCode(callSuper = true)
@@ -41,7 +41,7 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Output extends AsyncTask.Output {
-        String zipBblobName;
+        String downloadUrl;
         String zipFileName;
     }
 
@@ -106,7 +106,7 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
 
     @Override
     protected Output process() throws Exception {
-        List<AudioTrackDTO> tracks = songStorage()
+        List<AudioTrackDTO> tracks = songStorage
             .listMixesForSong(songId())
             .stream()
             // Exclude the "All" mix which is unlikely to be useful and is very large
@@ -121,7 +121,7 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
                 log.info("Zipping tracks for song {} to {}", songId(), file);
                 for (AudioTrackDTO track : tracks) {
                     log.info("Zipping track {}", track.getFqId());
-                    MediaContent media = mediaStorage().getMedia(mediaStorage().locationFor(songId(), track.getId()));
+                    MediaContent media = mediaStorage.getMedia(mediaStorage.locationFor(songId(), track.getId()));
                     out.putNextEntry(new ZipEntry(media.metadata().fileName()));
                     IOUtils.copy(media.stream(), out);
                 }
@@ -133,7 +133,7 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
                 .build();
             tempStorage.createFile(blobName, metadata, file);
         }
-        return new Output(blobName, zipFileName);
+        return new Output(tempStorage.getDownloadUrl(blobName, DOWNLOAD_URL_EXPIRY), zipFileName);
     }
     
 }
