@@ -6,12 +6,12 @@ import org.springframework.context.annotation.Configuration;
 
 import com.azure.data.tables.TableClient;
 import com.azure.data.tables.TableClientBuilder;
-import com.azure.identity.AzureCliCredential;
-import com.azure.identity.AzureCliCredentialBuilder;
 import com.azure.identity.DefaultAzureCredential;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 
 import lombok.Data;
 import lombok.Getter;
@@ -69,6 +69,23 @@ public class AzureClients {
             .credential(defaultCredential())
             .endpoint(blobs.endpoint)
             .containerName("song-timed-data")
+            .buildClient();
+    }
+
+    @Bean
+    public BlobContainerClient tempFileContainerClient() {
+        return new BlobContainerClientBuilder()
+            .credential(defaultCredential())
+            .endpoint(blobs.endpoint)
+            .containerName("temp-files")
+            .buildClient();
+    }
+
+    @Bean
+    public BlobServiceClient blobServiceClient() {
+        return new BlobServiceClientBuilder()
+            .credential(defaultCredential())
+            .endpoint(blobs.endpoint)
             .buildClient();
     }
 }

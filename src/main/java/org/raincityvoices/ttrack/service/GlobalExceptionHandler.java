@@ -1,10 +1,6 @@
 package org.raincityvoices.ttrack.service;
 
-import org.raincityvoices.ttrack.service.exceptions.BadRequestException;
-import org.raincityvoices.ttrack.service.exceptions.ConflictException;
-import org.raincityvoices.ttrack.service.exceptions.NotFoundException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import lombok.extern.slf4j.Slf4j;
 

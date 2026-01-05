@@ -1,18 +1,21 @@
-package org.raincityvoices.ttrack.service.tasks;
+package org.raincityvoices.ttrack.service.async;
 
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.util.PrototypeBean;
 
 import lombok.extern.slf4j.Slf4j;
 
+@PrototypeBean
 @Slf4j
-public class RefreshMixTrackTask extends MixTrackTaskBase {
+public class RefreshMixTrackTask extends MixTrackTaskBase<AudioTrackTask.Input, AudioTrackTask.Output> {
 
-    public RefreshMixTrackTask(AudioTrackDTO track, AudioTrackTaskManager factory) {
-        super(track, factory);
+    public RefreshMixTrackTask(AudioTrackDTO track) {
+        super(new Input(track));
     }
 
-    public static class Metadata implements TaskMetadata {
-        // no task-specific metadata to store
+    @Override
+    public Class<Input> getInputClass() {
+        return Input.class;
     }
     
     @Override
@@ -26,19 +29,16 @@ public class RefreshMixTrackTask extends MixTrackTaskBase {
     }
 
     @Override
-    protected TaskMetadata getTaskMetadata() {
-        return new Metadata();
-    }
-
-    @Override
     protected void doInitialize() {
         describeTrackOrThrow(trackId());
     }
 
     @Override
-    public AudioTrackDTO process() throws Exception {
+    public Output processTrack() throws Exception {
         log.info("Refreshing mix track: {}", mixTrack());
 
-        return performMix();
+        performMix();
+
+        return new Output();
     }
 }

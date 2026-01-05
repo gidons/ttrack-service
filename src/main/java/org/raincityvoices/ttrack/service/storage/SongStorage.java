@@ -17,6 +17,7 @@ public interface SongStorage {
      * @return the ID of the new or existing song.
      */
     String writeSong(SongDTO songDto);
+    boolean deleteSong(String songId);
     /** @return the metadata for all tracks created for the given song (empty list if none.) */
     List<AudioTrackDTO> listTracksForSong(String songId);
     default List<AudioTrackDTO> listPartsForSong(String songId) {

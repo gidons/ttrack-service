@@ -19,6 +19,11 @@ import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.api.TimedTextData;
+import org.raincityvoices.ttrack.service.async.AsyncTaskManager;
+import org.raincityvoices.ttrack.service.async.CreateMixTrackTask;
+import org.raincityvoices.ttrack.service.async.ProcessUploadedPartTask;
+import org.raincityvoices.ttrack.service.async.RefreshAllMixesTask;
+import org.raincityvoices.ttrack.service.async.RefreshMixTrackTask;
 import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
@@ -33,7 +38,6 @@ import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.storage.TimedDataStorage;
 import org.raincityvoices.ttrack.service.storage.TimedTextDTO;
-import org.raincityvoices.ttrack.service.tasks.AudioTrackTaskManager;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.util.MimeTypeUtils;
@@ -72,7 +76,7 @@ public class SongController {
     private final SongStorage songStorage;
     private final TimedDataStorage dataStorage;
     private final MediaStorage mediaStorage;
-    private final AudioTrackTaskManager taskManager;
+    private final AsyncTaskManager taskManager;
 
     private static final DefaultUriBuilderFactory URI_BUILDER_FACTORY = new DefaultUriBuilderFactory("/songs/");
 
@@ -171,15 +175,15 @@ public class SongController {
             AudioTrackDTO track = uploadOnePart(songId.value(), partNames[i], overwrite, files[i]);
             output.add(track);
         }
-        AudioTrackDTO allChannelTrack = updateAllChannelMix(songId.value());
-        taskManager.scheduleRefreshAllMixesTask(allChannelTrack);
+        updateAllChannelMix(songId.value());
+        taskManager.schedule(RefreshAllMixesTask.class, songId.value());
         return output.build();
     }
 
     @PutMapping({"/{id}/parts/{partName}","/{id}/parts/{partName}/"})
     public String uploadMediaForPart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part, 
                                      @QueryParam("overwrite") boolean overwrite, @RequestParam MultipartFile audioFile) throws Exception {
-        final AudioTrackDTO track = uploadOnePart(songId.value(), part.name(), overwrite, audioFile);
+        uploadOnePart(songId.value(), part.name(), overwrite, audioFile);
         updateAllChannelMix(songId.value());
         return part.name();
     }
@@ -204,7 +208,8 @@ public class SongController {
         mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
         track.setMediaLocation(mediaLocation);
         songStorage.writeTrack(track);
-        taskManager.scheduleProcessUploadedTrackTask(track);
+        // taskManager.scheduleProcessUploadedTrackTask(track);
+        taskManager.schedule(ProcessUploadedPartTask.class, track);
         return track;
     }
 
@@ -266,7 +271,7 @@ public class SongController {
         if (trackDto == null) {
             throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
-        taskManager.scheduleCreateMixTrackTask(trackDto);
+        taskManager.schedule(RefreshMixTrackTask.class, trackDto);
         return Conversions.toMixTrack(trackDto);
     }
 
@@ -397,7 +402,7 @@ public class SongController {
             songStorage.writeTrack(newDto);
         }
 
-        taskManager.scheduleCreateMixTrackTask(newDto);
+        taskManager.schedule(CreateMixTrackTask.class, newDto);
 
         return Conversions.toMixTrack(newDto);
     }

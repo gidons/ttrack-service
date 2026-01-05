@@ -10,7 +10,8 @@ public interface PropertyHandler<E> {
         throw new UnsupportedOperationException("Either getProperty() or getProperties() must be implemented."); 
     }
     default List<PropertyValue> getProperties(E pojo) { 
-        return List.of(getProperty(pojo)); 
+        PropertyValue pv = getProperty(pojo);
+        return pv == null ? List.of() : List.of(pv); 
     }
     default void setProperty(E pojo, Object value) {
         throw new UnsupportedOperationException("Either setProperty() or setProperties() must be implemented."); 

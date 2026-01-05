@@ -19,6 +19,9 @@ public abstract class PropertyHandlerDecorator<E> implements PropertyHandler<E> 
     @Override
     public PropertyValue getProperty(E pojo) {
         final PropertyValue baseValue = base.getProperty(pojo);
+        if (baseValue == null) {
+            return null;
+        }
         final Object convertedValue = convertToTableType(baseValue.getValue());
         return new PropertyValue(getName(), null, convertedValue);
     }

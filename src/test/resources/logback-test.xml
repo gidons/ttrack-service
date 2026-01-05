@@ -26,6 +26,8 @@
     <appender-ref ref="FILE"/>
   </root>
   <logger name="org.raincityvoices.ttrack.service.audio.AudioMixingStream" level="WARN"/>
+  <logger name="org.raincityvoices.ttrack.service.async.AzureTablesAsyncTaskStorage" level="INFO"/>
+  <logger name="org.raincityvoices.ttrack.service.storage.BaseTablesDAO" level="INFO"/>
 
   <logger name="org.zalando.logbook" level="TRACE">
     <appender-ref ref="REQUEST_LOG"/>

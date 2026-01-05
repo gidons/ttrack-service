@@ -1,7 +1,8 @@
-package org.raincityvoices.ttrack.service.tasks;
+package org.raincityvoices.ttrack.service.async;
 
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaContent;
+import org.raincityvoices.ttrack.service.util.PrototypeBean;
 
 import com.google.common.base.Preconditions;
 
@@ -12,12 +13,13 @@ import lombok.extern.slf4j.Slf4j;
  * the audio contents.
  */
 @Slf4j
-public class ProcessUploadedPartTask extends AudioTrackTask {
+@PrototypeBean
+public class ProcessUploadedPartTask extends AudioTrackTask<AudioTrackTask.Input, AudioTrackTask.Output> {
 
     private final String mediaLocation;
 
-    ProcessUploadedPartTask(AudioTrackDTO track, AudioTrackTaskManager factory) {
-        super(track, factory);
+    ProcessUploadedPartTask(AudioTrackDTO track) {
+        super(new Input(track));
         Preconditions.checkArgument(track.hasMedia());
         Preconditions.checkArgument(track.isPartTrack());
         this.mediaLocation = track.getMediaLocation();
@@ -29,27 +31,22 @@ public class ProcessUploadedPartTask extends AudioTrackTask {
     }
 
     @Override
-    protected TaskMetadata getTaskMetadata() {
-        return ProcessUploadedPartMetadata.builder()
-            .mediaLocation(mediaLocation)
-            .build();
+    public Class<Input> getInputClass() {
+        return AudioTrackTask.Input.class;
     }
 
     @Override
     protected void doInitialize() throws Exception {
+        super.doInitialize();
         if (!mediaStorage().exists(mediaLocation)) {
             throw new RuntimeException("No media exists at expected location " + mediaLocation);
         }
     }
 
     @Override
-    protected AudioTrackDTO process() throws Exception {
-        if (!mediaLocation.equals(track().getMediaLocation())) {
-            log.warn("Current track media location ({}) is different from what it was at task creation ({}). Will use current value.");
-        }
+    protected Output processTrack() throws Exception {
         MediaContent media = mediaStorage().getMedia(track().getMediaLocation());
         track().updateFileMetadata(media.metadata());
-        songStorage().writeTrack(track());
-        return track();
+        return new Output();
     }
 }

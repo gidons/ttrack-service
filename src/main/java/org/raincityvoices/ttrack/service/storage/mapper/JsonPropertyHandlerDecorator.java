@@ -27,7 +27,9 @@ public class JsonPropertyHandlerDecorator<E> extends PropertyHandlerDecorator<E>
 
     @Override
     public Object convertToTableType(Object pojoValue) {
-        assert pojoValue != null;
+        if (pojoValue == null) {
+            return null;
+        }
         try {
             return mapper.writeValueAsString(pojoValue);
         } catch (JsonProcessingException e) {

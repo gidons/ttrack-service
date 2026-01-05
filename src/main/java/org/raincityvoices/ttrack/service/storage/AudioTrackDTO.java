@@ -15,6 +15,8 @@ import org.raincityvoices.ttrack.service.storage.mapper.Property;
 import org.raincityvoices.ttrack.service.storage.mapper.RowKey;
 import org.raincityvoices.ttrack.service.storage.mapper.Timestamp;
 
+import com.microsoft.applicationinsights.core.dependencies.apachecommons.lang3.StringUtils;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -112,5 +114,7 @@ public class AudioTrackDTO extends BaseDTO {
             .build();
     }
 
-    public static String fqId(String songId, String trackId) { return String.format("%s/%s", songId, trackId); }
+    public static String fqId(String songId, String trackId) { 
+        return String.format("%s/%s", songId, StringUtils.defaultString(trackId, "-")); 
+    }
 }

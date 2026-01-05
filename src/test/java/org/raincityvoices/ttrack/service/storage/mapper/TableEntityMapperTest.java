@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.beans.IntrospectionException;
 import java.beans.PropertyDescriptor;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -18,6 +19,9 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.raincityvoices.ttrack.service.async.AudioTrackTask;
+import org.raincityvoices.ttrack.service.async.AudioTrackTask.Input;
+import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.beans.BeanUtils;
 
@@ -324,6 +328,22 @@ public class TableEntityMapperTest {
         expected.setEmbedded(new EmbeddedSubEntity("foo", 987, 3.14));
 
         assertEquals(expected, actual);
+    }
+
+    @Test
+    public void testAsyncTaskRoundTrip() {
+        AudioTrackTask.Input input = (Input) new AudioTrackTask.Input();
+        input.setTrackId("sometrack");
+        input.setSongId("somesong");
+        AsyncTaskDTO original = AsyncTaskDTO.builder()
+            .taskId("123123123")
+            .scheduled(Instant.now())
+            .input(input)
+            .build();
+        TableEntityMapper<AsyncTaskDTO> mapper = new TableEntityMapper<>(AsyncTaskDTO.class);
+        TableEntity entity = mapper.toTableEntity(original);
+        AsyncTaskDTO actual = mapper.fromTableEntity(entity);
+        assertEquals(original, actual);
     }
 
 }

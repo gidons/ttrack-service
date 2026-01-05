@@ -39,7 +39,7 @@ public class EmbeddedPropertyHandler<E> implements PropertyHandler<E> {
     @VisibleForTesting
     class ClassNameAttributeTypeHelper implements DynamicTypeHelper {
 
-        public static final String CLASS_ATTR_SUFFIX = ".class";
+        public static final String CLASS_ATTR_SUFFIX = "_class";
         private final String classNameAttr = getName() + CLASS_ATTR_SUFFIX;
         private final Map<Class, TableEntityMapper> mapperByClassName = new HashMap<>();
 
@@ -51,6 +51,10 @@ public class EmbeddedPropertyHandler<E> implements PropertyHandler<E> {
         @Override
         public TableEntityMapper getMapperForEntity(TableEntity entity) throws Exception {
             Class targetClass = resolveType(entity);
+            if (targetClass == null) {
+                // the property hasn't been persisted
+                return new NullMapper<>(baseClass());
+            }
             return mapperByClassName.computeIfAbsent(targetClass, MapperWithTypeProperty::new);
         }
 
@@ -58,8 +62,8 @@ public class EmbeddedPropertyHandler<E> implements PropertyHandler<E> {
             Object className = entity.getProperty(classNameAttr);
             log.info("Class name from entity: {}", className);
             if (className == null) {
-                // Fall back to base class
-                return getter().getReturnType();
+                // no class name field: the property hasn't been persisted
+                return null;
             }
             if (className instanceof String) {
                 return Class.forName((String) className);
@@ -69,23 +73,28 @@ public class EmbeddedPropertyHandler<E> implements PropertyHandler<E> {
             ));
         }
     
-    }
-
-    private class MapperWithTypeProperty extends TableEntityMapper<E> {
-
-        private final PropertyValue classPropValue;
-        public MapperWithTypeProperty(Class<E> entityClass) {
-            super(entityClass);
-            classPropValue = new PropertyValue(classPropName(), null, getEntityClass().getName());
+        private class NullMapper<T> extends TableEntityMapper<T> {
+            public NullMapper(Class<T> entityClass) { super(entityClass); }
+            @Override
+            public T fromTableEntity(TableEntity entity) { return null; }
         }
 
-        @Override
-        List<PropertyValue> getAllPropertyValues(E pojo) {
-            List<PropertyValue> otherPropertyValues = super.getAllPropertyValues(pojo);
-            return ImmutableList.<PropertyValue>builder()
-                .add(classPropValue)
-                .addAll(otherPropertyValues)
-                .build();
+        private class MapperWithTypeProperty extends TableEntityMapper<E> {
+
+            private final PropertyValue classPropValue;
+            public MapperWithTypeProperty(Class<E> entityClass) {
+                super(entityClass);
+                classPropValue = new PropertyValue(classNameAttr, null, getEntityClass().getName());
+            }
+
+            @Override
+            List<PropertyValue> getAllPropertyValues(E pojo) {
+                List<PropertyValue> otherPropertyValues = super.getAllPropertyValues(pojo);
+                return ImmutableList.<PropertyValue>builder()
+                    .add(classPropValue)
+                    .addAll(otherPropertyValues)
+                    .build();
+            }
         }
     }
 
@@ -163,9 +172,5 @@ public class EmbeddedPropertyHandler<E> implements PropertyHandler<E> {
 
     private Class baseClass() {
         return getter().getReturnType();
-    }
-
-    private String classPropName() {
-        return StringUtils.capitalize(getName()) + ".class";
     }
 }

@@ -2,10 +2,11 @@ package org.raincityvoices.ttrack.service.storage;
 
 import java.time.Instant;
 
+import org.raincityvoices.ttrack.service.async.AsyncTask;
+import org.raincityvoices.ttrack.service.storage.mapper.Embedded;
+import org.raincityvoices.ttrack.service.storage.mapper.Embedded.TypePolicy;
 import org.raincityvoices.ttrack.service.storage.mapper.PartitionKey;
-import org.raincityvoices.ttrack.service.storage.mapper.Property;
 import org.raincityvoices.ttrack.service.storage.mapper.Timestamp;
-import org.raincityvoices.ttrack.service.tasks.TaskMetadata;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -56,19 +57,24 @@ public class AsyncTaskDTO extends BaseDTO {
     
     /** Type of task (e.g., "CreateMixTrackTask", "ProcessUploadedTrackTask", "UploadPartTrackTask"). */
     String taskType;
-    String songId;
-    String trackId;
+    /** When the task was added to the execution queue. */
     Instant scheduled;
+    /** When the task started executing. */
     Instant startTime;
+    /** When the task completed or aborted execution. */
     Instant endTime;
     
-    /** Task-specific metadata serialized as JSON, needed to restart the task if necessary. */
-    @Getter(onMethod=@__(@Property(type="json")))
-    TaskMetadata metadata;
+    /** Task-specific input needed to restart the task if necessary. */
+    @Getter(onMethod=@__(@Embedded(typePolicy = TypePolicy.CLASSNAME_ATTRIBUTE)))
+    AsyncTask.Input input;
+
+    /** Task-specific output. */
+    @Getter(onMethod=@__(@Embedded(typePolicy = TypePolicy.CLASSNAME_ATTRIBUTE)))
+    AsyncTask.Output output;
     
     /** 
      * Error message or exception details if the task failed. 
-     * Null if task is PENDING, RUNNING, or SUCCEEDED. 
+     * Null unless the task is in FAILED, CANCELING, or CANCELED. 
      */
     String errorDetails;
     

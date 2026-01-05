@@ -1,17 +1,19 @@
-package org.raincityvoices.ttrack.service.tasks;
+package org.raincityvoices.ttrack.service.async;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.api.SongId;
+import org.raincityvoices.ttrack.service.async.AsyncTaskManager.TaskExec;
+import org.raincityvoices.ttrack.service.async.AudioTrackTask.Output;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 import org.raincityvoices.ttrack.service.model.TestData;
@@ -21,7 +23,6 @@ import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
-import org.raincityvoices.ttrack.service.util.Temp;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -39,7 +40,7 @@ public class CreateMixTrackTaskIntegTest {
     private static final String TEST_MIX_NAME = "test mix";
 
     @Autowired
-    private AudioTrackTaskManager manager;
+    private AsyncTaskManager taskManager;
 
     @Autowired
     private SongStorage songStorage;
@@ -52,7 +53,7 @@ public class CreateMixTrackTaskIntegTest {
 
     @BeforeAll
     public static void init() {
-        Temp.KEEP_FILES = true;
+        // Temp.KEEP_FILES = true;
     }
 
     @AfterEach
@@ -74,13 +75,13 @@ public class CreateMixTrackTaskIntegTest {
             .speedFactor(0.8)
             .build();
         songStorage.writeTrack(mixTrack);
-        CreateMixTrackTask task = new CreateMixTrackTask(mixTrack, manager);
-        task.initialize();
+        TaskExec<CreateMixTrackTask, Output> exec = taskManager.schedule(CreateMixTrackTask.class, mixTrack);
+        CreateMixTrackTask task = exec.task();
         AsyncTaskDTO taskDto = taskStorage.getTask(task.taskId());
         assertEquals("CreateMixTrack", taskDto.getTaskType());
-        assertEquals(AsyncTaskDTO.SCHEDULED, taskDto.getStatus());
-        AudioTrackDTO processed = task.call();
-        assertNotNull(processed.getMediaLocation());
+
+        Output output = exec.result().get();
+        assertNotNull(output.getTrackETag());
         taskDto = taskStorage.getTask(task.taskId());
         assertEquals(AsyncTaskDTO.SUCCEEDED, taskDto.getStatus());
         assertThat(taskDto.getStartTime(), Matchers.lessThan(Instant.now()));
@@ -96,13 +97,5 @@ public class CreateMixTrackTaskIntegTest {
         assertEquals(AudioFormats.MP3_TYPE, metadata.contentType());
         assertEquals(mixTrack.getDurationSec(), metadata.durationSec(), 1.0);
         assertEquals(null, mixTrack.getCurrentTaskId());
-    }
-
-    @Test
-    public void testRefreshMix() throws InterruptedException, ExecutionException {
-        AudioTrackDTO mixTrack = songStorage.describeMix(TestData.SUNSHINE_SONG_ID, "Lead Missing");
-        Future<AudioTrackDTO> future = manager.scheduleCreateMixTrackTask(mixTrack);
-        Thread.sleep(2000);
-        future.get();
     }
 }

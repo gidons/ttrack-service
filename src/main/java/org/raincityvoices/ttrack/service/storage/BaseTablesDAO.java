@@ -30,8 +30,15 @@ public class BaseTablesDAO<DTO extends BaseDTO> {
     }
 
     public List<DTO> query(String filter) {
+        return query(filter, null);
+    }
+
+    public List<DTO> query(String filter, Integer maxResults) {
         log.info("Listing all entities matching query: {}", filter);
-        PagedIterable<TableEntity> results = client.listEntities(new ListEntitiesOptions().setFilter(filter),
+        PagedIterable<TableEntity> results = client.listEntities(
+            new ListEntitiesOptions()
+                .setFilter(filter)
+                .setTop(maxResults),
             null, null);
         return results.stream().map(mapper::fromTableEntity).toList();
     }
@@ -41,7 +48,7 @@ public class BaseTablesDAO<DTO extends BaseDTO> {
         Preconditions.checkNotNull(rowKey);
         try {
             TableEntity entity = client.getEntity(partitionKey, rowKey);
-            log.debug("Table entity: {}", entity.getProperties());
+            log.debug("Read table entity: {}", entity.getProperties());
             return mapper.fromTableEntity(entity);
         } catch (TableServiceException e) {
             if (e.getResponse().getStatusCode() == HttpStatus.NOT_FOUND.value()) {
@@ -63,7 +70,7 @@ public class BaseTablesDAO<DTO extends BaseDTO> {
         }
         String fullKey = entity.getPartitionKey() + "/" + entity.getRowKey();
         try {
-            log.debug("Table entity: {}", entity.getProperties());
+            log.debug("Writing table entity: {}", entity.getProperties());
             final Response<Void> response;
             if (dto.hasETag()) {
                 response = client.updateEntityWithResponse(entity, TableEntityUpdateMode.REPLACE, true, null, null);

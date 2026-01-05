@@ -1,5 +1,8 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.async;
 
+import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
+import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
+import org.raincityvoices.ttrack.service.storage.BaseTablesDAO;
 import org.springframework.stereotype.Component;
 
 import com.azure.data.tables.TableClient;

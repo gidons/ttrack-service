@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service.tasks;
+package org.raincityvoices.ttrack.service.async;
 
 import java.io.IOException;
 import java.util.List;
@@ -17,6 +17,8 @@ import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaContent;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
 
 import com.azure.cosmos.implementation.guava25.base.Preconditions;
 
@@ -24,16 +26,14 @@ import lombok.extern.slf4j.Slf4j;
 import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 
 @Slf4j
-public abstract class MixTrackTaskBase extends AudioTrackTask {
+@Component
+@Scope("prototype")
+public abstract class MixTrackTaskBase<I extends AudioTrackTask.Input, O extends AudioTrackTask.Output> extends AudioTrackTask<I, O> {
 
     private List<AudioTrackDTO> partTracks;
 
-    public MixTrackTaskBase(AudioTrackDTO track, AudioTrackTaskManager factory) {
-        super(track, factory);
-    }
-
-    @Override
-    protected void doInitialize() throws Exception {
+    public MixTrackTaskBase(I input) {
+        super(input);
     }
 
     protected final AudioTrackDTO mixTrack() { return track(); }

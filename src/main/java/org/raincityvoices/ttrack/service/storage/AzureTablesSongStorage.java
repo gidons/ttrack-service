@@ -54,8 +54,13 @@ public class AzureTablesSongStorage implements SongStorage {
         return songDto.getId();
     }
 
+    @Override
     public boolean deleteSong(String songId) {
         Preconditions.checkNotNull(songId);
+        if (!listTracksForSong(songId, 1).isEmpty()) {
+            log.warn("Song {} has tracks; not deleting.", songId);
+            return false;
+        }
         return songDao.delete(songId, "");
     }
 
@@ -70,10 +75,14 @@ public class AzureTablesSongStorage implements SongStorage {
     @Override
     public List<AudioTrackDTO> listTracksForSong(String songId) {
         Preconditions.checkNotNull(songId);
-        // TODO Check for existence of the song?
         log.info("Listing tracks for song ID {}", songId);
+        return listTracksForSong(songId, null);
+    }
+
+    private List<AudioTrackDTO> listTracksForSong(String songId, Integer maxResults) {
+        // TODO Check for existence of the song?
         String query = String.format("PartitionKey eq '%s' and RowKey ne ''", songId);
-        return trackDao.query(query);
+        return trackDao.query(query, maxResults);
     }
 
     @Override
