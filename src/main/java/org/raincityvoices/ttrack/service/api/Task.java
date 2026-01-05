@@ -3,6 +3,9 @@ package org.raincityvoices.ttrack.service.api;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Value;
+
+import java.time.Instant;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.experimental.Accessors;
 
@@ -15,4 +18,6 @@ public class Task {
     String status;
     Object input;
     Object output;
+    Instant scheduled;
+    Instant ended;
 }

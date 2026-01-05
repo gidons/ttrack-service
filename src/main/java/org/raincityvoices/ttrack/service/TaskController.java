@@ -37,6 +37,8 @@ public class TaskController {
             .status(dto.getStatus())
             .input(dto.getInput())
             .output(dto.getOutput())
+            .scheduled(dto.getScheduled())
+            .ended(dto.getEndTime())
             .build();
     }
     

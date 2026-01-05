@@ -3,6 +3,7 @@ package org.raincityvoices.ttrack.service.async;
 import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -42,6 +43,7 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
     @AllArgsConstructor
     public static class Output extends AsyncTask.Output {
         String downloadUrl;
+        Instant downloadUrlExpiry;
         String zipFileName;
     }
 
@@ -133,7 +135,7 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
                 .build();
             tempStorage.createFile(blobName, metadata, file);
         }
-        return new Output(tempStorage.getDownloadUrl(blobName, DOWNLOAD_URL_EXPIRY), zipFileName);
+        return new Output(tempStorage.getDownloadUrl(blobName, DOWNLOAD_URL_EXPIRY), clock().instant().plus(DOWNLOAD_URL_EXPIRY), zipFileName);
     }
     
 }
