@@ -4,6 +4,8 @@ application:
   name: ttrack-service
 
 spring:
+  main:
+    web-application-type: SERVLET
   servlet:
     multipart:
       max-file-size: 100MB

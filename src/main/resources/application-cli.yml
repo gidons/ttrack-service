@@ -1,0 +1,4 @@
+# CLI configuration (disable web server)
+spring:
+    main:
+        web-application-type: NONE

@@ -14,13 +14,22 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.azure.security.keyvault.secrets.SecretClient;
+import com.clerk.backend_api.Clerk;
+
 import lombok.Data;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
 @ConfigurationProperties("service")
+@RequiredArgsConstructor
+@Slf4j
 public class ServiceConfig {
+
+    private final SecretClient secretClient;
 
     @Data
     public static class CacheConfig {

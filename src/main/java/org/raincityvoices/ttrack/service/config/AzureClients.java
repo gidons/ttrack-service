@@ -8,6 +8,8 @@ import com.azure.data.tables.TableClient;
 import com.azure.data.tables.TableClientBuilder;
 import com.azure.identity.DefaultAzureCredential;
 import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.security.keyvault.secrets.SecretClient;
+import com.azure.security.keyvault.secrets.SecretClientBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
@@ -86,6 +88,14 @@ public class AzureClients {
         return new BlobServiceClientBuilder()
             .credential(defaultCredential())
             .endpoint(blobs.endpoint)
+            .buildClient();
+    }
+
+    @Bean
+    public SecretClient secretClient() {
+        return new SecretClientBuilder()
+            .credential(defaultCredential())
+            .vaultUrl("https://ttracksecrets.vault.azure.net/")
             .buildClient();
     }
 }
