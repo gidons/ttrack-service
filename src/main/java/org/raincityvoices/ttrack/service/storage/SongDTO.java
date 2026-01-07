@@ -41,6 +41,11 @@ public class SongDTO extends BaseDTO {
     private String arranger;
     /** Musical key, e.g. "D#" or "Db". */
     private String key;
+    /** 
+     * Voicing type, e.g. "SATB", "TTBB", "SSAATTBB", etc. 
+     * This is mostly used by the FE to implement some sensible defaults.
+     */
+    private String voicing;
     /** Song duration in seconds, reflecting the original part tracks. Some mix tracks might have different duration. */
     private int durationSec;
 
@@ -53,15 +58,18 @@ public class SongDTO extends BaseDTO {
     }
 
     public static SongDTO fromSong(Song song) {
-        return SongDTO.builder()
+        SongDTO dto = SongDTO.builder()
             .id(song.getId().value())
             .title(song.getTitle())
             .shortTitle(song.getShortTitle())
             .version(song.getVersion())
             .arranger(song.getArranger())
             .key(song.getKey())
+            .voicing(song.getVoicing())
             .durationSec(song.getDurationSec())
             .build();
+        dto.setETag(song.getETag());
+        return dto;
     }
 
     public Song toSong() {
@@ -72,7 +80,9 @@ public class SongDTO extends BaseDTO {
             .version(version)
             .arranger(arranger)
             .key(key)
+            .voicing(voicing)
             .durationSec(durationSec)
+            .eTag(eTag)
             .build();
     }
 }

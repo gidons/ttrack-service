@@ -116,7 +116,7 @@ public class SongController {
     @PutMapping({"/{id}","/{id}/"})
     public Song updateSong(@PathVariable("id") String songId, @RequestBody Song song) {
         if (!songId.equals(song.getId().value())) {
-            throw new IllegalArgumentException("Song ID in URL does not match ID in body");
+            throw new BadRequestException("Song ID in URL does not match ID in body");
         }
         SongDTO dto = SongDTO.fromSong(song);
         songStorage.writeSong(dto);

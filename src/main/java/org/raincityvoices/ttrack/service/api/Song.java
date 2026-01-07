@@ -1,6 +1,9 @@
 package org.raincityvoices.ttrack.service.api;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Builder;
+import lombok.Getter;
 import lombok.Builder.Default;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
@@ -18,5 +21,8 @@ public class Song {
     String version;
     String arranger;
     String key;
+    String voicing;
     int durationSec;
+    @Getter(onMethod = @__(@JsonProperty("eTag")))
+    String eTag;
 }
