@@ -82,8 +82,6 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
         if (song == null) {
             throw new IllegalArgumentException(String.format("Song %s does not exist.", songId()));
         }
-        blobName = taskId() + ".zip";
-        zipFileName = song.getShortTitle() + ".zip";
     }
 
     @Override
@@ -108,6 +106,8 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
 
     @Override
     protected Output process() throws Exception {
+        blobName = taskId() + ".zip";
+        zipFileName = song.getShortTitleOrTitle() + ".zip";
         List<AudioTrackDTO> tracks = songStorage
             .listMixesForSong(songId())
             .stream()
@@ -118,7 +118,6 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
             return null;
         }
         try(Temp.File file = fileManager.tempFile(songId(), ".zip")) {
-
             try (ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
                 log.info("Zipping tracks for song {} to {}", songId(), file);
                 for (AudioTrackDTO track : tracks) {

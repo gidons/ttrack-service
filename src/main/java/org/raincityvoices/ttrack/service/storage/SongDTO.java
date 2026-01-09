@@ -7,6 +7,8 @@ import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.storage.mapper.PartitionKey;
 
+import com.google.common.base.MoreObjects;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -84,5 +86,10 @@ public class SongDTO extends BaseDTO {
             .durationSec(durationSec)
             .eTag(eTag)
             .build();
+    }
+
+    @Transient
+    public String getShortTitleOrTitle() {
+        return MoreObjects.firstNonNull(shortTitle, title);
     }
 }

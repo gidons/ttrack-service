@@ -15,7 +15,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.azure.security.keyvault.secrets.SecretClient;
-import com.clerk.backend_api.Clerk;
 
 import lombok.Data;
 import lombok.Getter;
