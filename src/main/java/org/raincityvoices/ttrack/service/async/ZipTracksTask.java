@@ -9,22 +9,24 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.IOUtils;
-import org.raincityvoices.ttrack.service.SongController;
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.MediaContent;
 import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.storage.TempFileStorage;
+import org.raincityvoices.ttrack.service.storage.mapper.Property;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.raincityvoices.ttrack.service.util.PrototypeBean;
 import org.raincityvoices.ttrack.service.util.Temp;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.google.common.collect.ImmutableList;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -32,9 +34,22 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Accessors(fluent = true)
 @PrototypeBean
-public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.Output> {
+public class ZipTracksTask extends AsyncTask<ZipTracksTask.Input, ZipTracksTask.Output> {
 
     private static final Duration DOWNLOAD_URL_EXPIRY = Duration.ofMinutes(60);
+
+    @Data
+    @EqualsAndHashCode(callSuper = true)
+    @Accessors(fluent = false)
+    @NoArgsConstructor
+    public static class Input extends AsyncTask.Input {
+        public Input(String songId, List<String> trackIds) {
+            super(songId);
+            this.trackIds = ImmutableList.copyOf(trackIds);
+        }
+        @Getter(onMethod = @__(@Property(type="json")))
+        List<String> trackIds;
+    }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
@@ -62,8 +77,8 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
     /** The name of the blob storing the zipped contents. */
     private String blobName;
 
-    public ZipAllMixesTask(String songId) {
-        super(new Input(songId)); 
+    public ZipTracksTask(String songId, List<String> trackIds) {
+        super(new Input(songId, trackIds)); 
     }
 
     @Override
@@ -81,6 +96,9 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
         song = songStorage.describeSong(songId());
         if (song == null) {
             throw new IllegalArgumentException(String.format("Song %s does not exist.", songId()));
+        }
+        if (input().getTrackIds() == null || input().getTrackIds().isEmpty()) {
+            throw new IllegalArgumentException("Track IDs to zip not specified.");
         }
     }
 
@@ -108,21 +126,12 @@ public class ZipAllMixesTask extends AsyncTask<AsyncTask.Input, ZipAllMixesTask.
     protected Output process() throws Exception {
         blobName = taskId() + ".zip";
         zipFileName = song.getShortTitleOrTitle() + ".zip";
-        List<AudioTrackDTO> tracks = songStorage
-            .listMixesForSong(songId())
-            .stream()
-            // Exclude the "All" mix which is unlikely to be useful and is very large
-            .filter(t -> !t.getId().equals(SongController.ALL_CHANNEL_MIX_ID))
-            .toList();
-        if (tracks.isEmpty()) {
-            return null;
-        }
         try(Temp.File file = fileManager.tempFile(songId(), ".zip")) {
             try (ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
                 log.info("Zipping tracks for song {} to {}", songId(), file);
-                for (AudioTrackDTO track : tracks) {
-                    log.info("Zipping track {}", track.getFqId());
-                    MediaContent media = mediaStorage.getMedia(mediaStorage.locationFor(songId(), track.getId()));
+                for (String trackId : input().getTrackIds()) {
+                    log.info("Zipping track {}/{}", songId(), trackId);
+                    MediaContent media = mediaStorage.getMedia(mediaStorage.locationFor(songId(), trackId));
                     out.putNextEntry(new ZipEntry(media.metadata().fileName()));
                     IOUtils.copy(media.stream(), out);
                 }

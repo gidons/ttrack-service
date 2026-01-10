@@ -9,34 +9,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import org.apache.commons.lang3.StringUtils;
-import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.clerk.backend_api.Clerk;
 import com.clerk.backend_api.helpers.security.AuthenticateRequest;
-import com.clerk.backend_api.helpers.security.VerifyToken;
 import com.clerk.backend_api.helpers.security.models.AuthenticateRequestOptions;
 import com.clerk.backend_api.helpers.security.models.RequestState;
-import com.clerk.backend_api.helpers.security.models.TokenVerificationResponse;
-import com.clerk.backend_api.helpers.security.models.VerifyTokenOptions;
 import com.clerk.backend_api.models.components.User;
-import com.clerk.backend_api.models.errors.ClerkErrors;
-import com.clerk.backend_api.models.errors.VerifyOAuthAccessTokenOauthAccessTokensResponseBody;
 import com.clerk.backend_api.models.operations.GetUserResponse;
-import com.clerk.backend_api.models.operations.ListDomainsResponse;
-import com.clerk.backend_api.models.operations.VerifyClientRequestBody;
-import com.clerk.backend_api.models.operations.VerifyClientResponse;
-import com.clerk.backend_api.models.operations.VerifyOAuthAccessTokenRequestBody;
-import com.clerk.backend_api.models.operations.VerifyOAuthAccessTokenResponse;
-import com.clerk.backend_api.operations.VerifyOAuthAccessToken;
-import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -96,8 +79,6 @@ public class ClerkAuthFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-
-
     private User fetchUser(String userId) {
         try {
             GetUserResponse userResp = clerk.users().get(userId);
@@ -107,8 +88,6 @@ public class ClerkAuthFilter extends OncePerRequestFilter {
             return null;
         }
     }
-
-
 
     private Map<String, List<String>> getHeaders(HttpServletRequest request) {
         return Collections.list(request.getHeaderNames()).stream()

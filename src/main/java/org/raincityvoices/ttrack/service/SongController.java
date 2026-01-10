@@ -2,7 +2,6 @@ package org.raincityvoices.ttrack.service;
 
 import java.io.IOException;
 import java.net.URI;
-import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -26,8 +25,8 @@ import org.raincityvoices.ttrack.service.async.CreateMixTrackTask;
 import org.raincityvoices.ttrack.service.async.ProcessUploadedPartTask;
 import org.raincityvoices.ttrack.service.async.RefreshAllMixesTask;
 import org.raincityvoices.ttrack.service.async.RefreshMixTrackTask;
-import org.raincityvoices.ttrack.service.async.ZipAllMixesTask;
-import org.raincityvoices.ttrack.service.async.ZipAllMixesTask.Output;
+import org.raincityvoices.ttrack.service.async.ZipTracksTask;
+import org.raincityvoices.ttrack.service.async.ZipTracksTask.Output;
 import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
@@ -42,13 +41,9 @@ import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.storage.TimedDataStorage;
 import org.raincityvoices.ttrack.service.storage.TimedTextDTO;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -325,8 +320,20 @@ public class SongController {
     }
 
     @PostMapping("/{id}/zip")
-    public String createMediaZipFile(@PathVariable("id") SongId songId) {
-        TaskExec<ZipAllMixesTask,Output> exec = taskManager.schedule(ZipAllMixesTask.class, songId.value());
+    public String createMediaZipFile(@PathVariable("id") SongId songId, @RequestBody List<String> trackIds) {
+        if (trackIds == null) {
+            throw new BadRequestException("Must specify list of tracks to zip.");
+        }
+        trackIds.forEach(trackId -> {
+            AudioTrackDTO track = songStorage.describeTrack(songId.value(), trackId);
+            if (track == null) {
+                throw new BadRequestException("Track '" + trackId + "' does not exist.");
+            }
+            if (!track.hasMedia()) {
+                throw new BadRequestException("Track '" + trackId + "' has no media.");
+            }
+        });
+        TaskExec<ZipTracksTask,Output> exec = taskManager.schedule(ZipTracksTask.class, songId.value(), trackIds);
         return exec.task().taskId();
     }    
 
