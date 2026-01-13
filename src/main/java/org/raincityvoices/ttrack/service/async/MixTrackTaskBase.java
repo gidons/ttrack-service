@@ -9,6 +9,8 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.raincityvoices.ttrack.service.Conversions;
+import org.raincityvoices.ttrack.service.MediaUrlProvider;
+import org.raincityvoices.ttrack.service.MediaUrlProviderImpl;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.audio.AudioMixingStream;
 import org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter;
@@ -17,6 +19,7 @@ import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.MediaContent;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -31,6 +34,7 @@ import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 public abstract class MixTrackTaskBase<I extends AudioTrackTask.Input, O extends AudioTrackTask.Output> extends AudioTrackTask<I, O> {
 
     private List<AudioTrackDTO> partTracks;
+    private MediaUrlProviderImpl mediaUrlProvider;
 
     public MixTrackTaskBase(I input) {
         super(input);
@@ -47,7 +51,7 @@ public abstract class MixTrackTaskBase<I extends AudioTrackTask.Input, O extends
     }
 
     protected AudioTrackDTO performMix() throws UnsupportedAudioFileException, IOException {
-        MixInfo mixInfo = Conversions.toMixTrack(track()).mixInfo();
+        MixInfo mixInfo = Conversions.toMixTrack(track(), MediaUrlProvider.NOOP).mixInfo();
         int numParts = mixInfo.parts().size();
         partTracks = mixInfo.parts().stream().map(AudioPart::value).map(this::describeTrackOrThrow).toList();
         partTracks.forEach(pt -> {

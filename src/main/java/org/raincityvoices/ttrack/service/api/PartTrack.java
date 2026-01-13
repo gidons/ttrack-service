@@ -32,8 +32,4 @@ public class PartTrack extends AudioTrack {
     @Override
     @JsonProperty
     public URI url() { return SongController.partTrackUrl(songId(), part()); }
-
-    @Override
-    @JsonProperty
-    public URI mediaUrl() { return hasMedia() ? SongController.partMediaUrl(songId(), part()) : null; }
 }

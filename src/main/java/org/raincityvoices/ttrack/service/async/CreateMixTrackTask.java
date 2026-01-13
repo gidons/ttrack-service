@@ -1,6 +1,7 @@
 package org.raincityvoices.ttrack.service.async;
 
 import org.raincityvoices.ttrack.service.Conversions;
+import org.raincityvoices.ttrack.service.MediaUrlProvider;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.mapper.Property;
@@ -25,7 +26,7 @@ public class CreateMixTrackTask extends MixTrackTaskBase<CreateMixTrackTask.Inpu
         private MixInfo mixInfo;
         public Input(AudioTrackDTO mixTrack) {
             super(mixTrack);
-            this.mixInfo = Conversions.toMixTrack(mixTrack).mixInfo();
+            this.mixInfo = Conversions.toMixTrack(mixTrack, MediaUrlProvider.NOOP).mixInfo();
         }
     }
 

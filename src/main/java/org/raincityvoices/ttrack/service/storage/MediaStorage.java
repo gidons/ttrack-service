@@ -1,5 +1,7 @@
 package org.raincityvoices.ttrack.service.storage;
 
+import java.time.Duration;
+
 import org.raincityvoices.ttrack.service.api.SongId;
 
 public interface MediaStorage {
@@ -13,6 +15,7 @@ public interface MediaStorage {
      * @return true if the media existed and was deleted, false if it didn't exist.
      */
     boolean deleteMedia(String mediaLocation);
+    String getDownloadUrl(String mediaLocation, Duration timeout);
     default String locationFor(SongId songId, String trackId) {
         return locationFor(songId.value(), trackId);
     }

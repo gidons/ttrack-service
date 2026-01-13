@@ -29,6 +29,5 @@ public abstract class AudioTrack {
     boolean hasMedia;
     @JsonProperty
     public abstract URI url();
-    @JsonProperty
-    public abstract URI mediaUrl();
+    URI mediaUrl;
 }

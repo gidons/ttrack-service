@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -35,6 +36,7 @@ public class DiskCachingMediaStorage implements MediaStorage {
          */
         FileMetadata downloadMedia(String location, FileMetadata currentMetadata, File destination);
         FileMetadata fetchMetadata(String location);
+        String getDownloadUrl(String location, Duration timeout);
         void uploadMedia(File source, String location);
         void updateMetadata(FileMetadata metadata, String location);
         void deleteMedia(String mediaLocation);
@@ -219,6 +221,11 @@ public class DiskCachingMediaStorage implements MediaStorage {
         return getClient(mediaLocation).getMedia();
     }
 
+    @Override
+    public String getDownloadUrl(String mediaLocation, Duration timeout) {
+        return remote.getDownloadUrl(mediaLocation, timeout);
+    }
+
     public void putMedia(String mediaLocation, MediaContent content) {
         Preconditions.checkNotNull(mediaLocation);
         Preconditions.checkNotNull(content);
@@ -243,6 +250,8 @@ public class DiskCachingMediaStorage implements MediaStorage {
     public void clearCache() {
         
     }
+
+    
 
     @VisibleForTesting
     File mediaFile(String mediaLocation, String suffix) {

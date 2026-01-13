@@ -76,12 +76,14 @@ public class SongController {
 
     /**
      * The default mix that has one part per channel.
-     */
+    */
     public static final String ALL_CHANNEL_MIX_ID = "All";
+
     private final SongStorage songStorage;
     private final TimedDataStorage dataStorage;
     private final MediaStorage mediaStorage;
     private final AsyncTaskManager taskManager;
+    private final MediaUrlProvider mediaUrlProvider;
 
     private static final DefaultUriBuilderFactory URI_BUILDER_FACTORY = new DefaultUriBuilderFactory("/songs/");
 
@@ -131,7 +133,7 @@ public class SongController {
         log.info("Loaded tracks: ");
         trackDtos.forEach(o -> log.info("Track: {}", o));
         return trackDtos.stream()
-                        .map(dto -> Conversions.toPartTrack(dto))
+                        .map(dto -> Conversions.toPartTrack(dto, mediaUrlProvider))
                         .toList();
     }
 
@@ -141,7 +143,7 @@ public class SongController {
         log.info("Loaded tracks: ");
         trackDtos.forEach(o -> log.info("Track: {}", o));
         return trackDtos.stream()
-                        .map(dto -> Conversions.toMixTrack(dto))
+                        .map(dto -> Conversions.toMixTrack(dto, mediaUrlProvider))
                         .toList();
     }
 
@@ -152,7 +154,7 @@ public class SongController {
     @GetMapping({"/{id}/parts/{partName}","/{id}/parts/{partName}/"})
     public PartTrack describePart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part) {
         AudioTrackDTO dto = songStorage.describePart(songId.value(), part.name());
-        return Conversions.toPartTrack(dto);
+        return Conversions.toPartTrack(dto, mediaUrlProvider);
     }
 
     @PutMapping({"/{id}/parts", "/{id}/parts/"})
@@ -267,7 +269,7 @@ public class SongController {
         if (trackDto == null) {
             throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
-        return Conversions.toMixTrack(trackDto);
+        return Conversions.toMixTrack(trackDto, mediaUrlProvider);
     }
 
     @PostMapping({"/{id}/mixes/{mixName}/refresh","/{id}/mixes/{mixName}/refresh/"})
@@ -277,7 +279,7 @@ public class SongController {
             throw new NotFoundException("Mix '" + mixName + "' not found for song '" + songId.value() + "'");
         }
         taskManager.schedule(RefreshMixTrackTask.class, trackDto);
-        return Conversions.toMixTrack(trackDto);
+        return Conversions.toMixTrack(trackDto, mediaUrlProvider);
     }
 
     @GetMapping({"/{id}/mixes/{mixName}/media","/{id}/mixes/{mixName}/media/"})
@@ -419,7 +421,7 @@ public class SongController {
 
         taskManager.schedule(CreateMixTrackTask.class, newDto);
 
-        return Conversions.toMixTrack(newDto);
+        return Conversions.toMixTrack(newDto, mediaUrlProvider);
     }
 
     @DeleteMapping("/{id}/mixes/{mixName}")
@@ -439,7 +441,7 @@ public class SongController {
     @GetMapping({"/{id}/defaultMixes","/{id}/defaultMixes/"})
     public List<MixInfo> listDefaultMixesForSong(@PathVariable("id") SongId songId) {
         List<AudioTrackDTO> partTracks = songStorage.listPartsForSong(songId.value());
-        List<AudioPart> parts = partTracks.stream().map(dto -> Conversions.toPartTrack(dto)).map(PartTrack::part).toList();
+        List<AudioPart> parts = partTracks.stream().map(dto -> Conversions.toPartTrack(dto, mediaUrlProvider)).map(PartTrack::part).toList();
         return MixUtils.getParseableMixes(parts);
     }
 

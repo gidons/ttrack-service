@@ -41,7 +41,4 @@ public class MixTrack extends AudioTrack {
 
     @Override
     public URI url() { return SongController.mixTrackUrl(songId(), name()); }
-
-    @Override
-    public URI mediaUrl() { return hasMedia() ? SongController.mixMediaUrl(songId(), name()) : null; }
 }

@@ -41,7 +41,7 @@ public class Conversions {
         return partNames.stream().map(AudioPart::new).toList();
     }
 
-    public static MixTrack toMixTrack(AudioTrackDTO dto) {
+    public static MixTrack toMixTrack(AudioTrackDTO dto, MediaUrlProvider urlProvider) {
         assert dto.isMixTrack();
         return MixTrack.builder()
             .songId(new SongId(dto.getSongId()))
@@ -56,11 +56,12 @@ public class Conversions {
             .updated(dto.getUpdated())
             .currentTaskId(dto.getCurrentTaskId())
             .hasMedia(dto.hasMedia())
+            .mediaUrl(urlProvider.getMediaUrl(dto))
             .durationSec(dto.getDurationSec())
             .build();
     }
 
-    public static PartTrack toPartTrack(AudioTrackDTO dto) {
+    public static PartTrack toPartTrack(AudioTrackDTO dto, MediaUrlProvider urlProvider) {
         assert dto.isPartTrack();
         return PartTrack.builder()
             .songId(new SongId(dto.getSongId()))
@@ -69,6 +70,7 @@ public class Conversions {
             .updated(dto.getUpdated())
             .currentTaskId(dto.getCurrentTaskId())
             .hasMedia(dto.hasMedia())
+            .mediaUrl(urlProvider.getMediaUrl(dto))
             .durationSec(dto.getDurationSec())
             .build();
     }

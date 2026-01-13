@@ -7,6 +7,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.time.Duration;
 
 import org.springframework.stereotype.Component;
 
@@ -41,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
 
     private final BlobContainerClient mediaContainerClient;
+    private final DownloadUrlHelper downloadUrlHelper;
 
     @Override
     public FileMetadata downloadMedia(String location, FileMetadata currentMetadata, File destination) {
@@ -64,6 +66,11 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
         } catch(Exception e) {
             throw new RuntimeException("Failed to download media from blob " + location + " to local file " + destination);
         }
+    }
+
+    @Override
+    public String getDownloadUrl(String location, Duration timeout) {
+        return downloadUrlHelper.getDownloadUrl(client(location), timeout);
     }
     
     @Override
