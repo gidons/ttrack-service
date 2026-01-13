@@ -40,12 +40,11 @@ public class PartTrackTest {
         System.out.println(json);
 
         PartTrack recon = mapper.readValue(json, PartTrack.class);
-        // hasMedia isn't present in the JSON, and isn't set automatically
+        // hasMedia and mediaUrl aren't present in the JSON, and aren't set automatically
         PartTrack expected = original.toBuilder().hasMedia(false).build();
         assertEquals(expected, recon);
 
         JsonNode tree = mapper.readTree(json);
         assertEquals("/songs/the%20song/parts/Bari", tree.get("url").asText());
-        assertEquals("/songs/the%20song/parts/Bari/media", tree.get("mediaUrl").asText());
     }
 }
