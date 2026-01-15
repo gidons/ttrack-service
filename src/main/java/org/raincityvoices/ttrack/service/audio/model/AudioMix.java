@@ -6,12 +6,15 @@ import java.nio.FloatBuffer;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.OptBoolean;
 
 /**
  * A representation of a specific way to mix specific audio parts into one or more output channels.
  */
 // TODO Add parameters for pitch shift and time stretch.
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "_type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "_type",
+        requireTypeIdForSubtypes = OptBoolean.FALSE
+)
 @JsonSubTypes({
     @JsonSubTypes.Type(value = MonoMix.class, name = "MonoMix"),
     @JsonSubTypes.Type(value = StereoMix.class, name = "StereoMix"),

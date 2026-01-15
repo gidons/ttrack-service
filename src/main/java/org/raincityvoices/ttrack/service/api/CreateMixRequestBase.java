@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
     @Type(CreateMixTrackPackageRequest.class)
 })
 public abstract class CreateMixRequestBase {
-    public static final Range<Double> SPEED_FACTOR_VALID_RANGE = Range.of(0.3333, 3.0);
+    public static final Range<Double> SPEED_FACTOR_VALID_RANGE = Range.of(0.1, 3.0);
     public static final Range<Integer> PITCH_SHIFT_VALID_RANGE = Range.of(-11, 11); // up to almost one octave each way
 
     public abstract List<AudioPart> parts();

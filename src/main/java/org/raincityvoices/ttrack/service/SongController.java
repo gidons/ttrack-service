@@ -382,7 +382,7 @@ public class SongController {
         try {
             mix = MixUtils.parseStereoMix(request.description(), request.parts());
         } catch(IllegalArgumentException e) {
-            log.info("Unable to parse audio mix description '{}' for parts {}", request.description(), request.parts());
+            log.info("Unable to parse audio mix description '{}' for parts {}", request.description(), request.parts(), e);
             throw new BadRequestException("Invalid mix description or parts: " + e.getMessage());
         }
         

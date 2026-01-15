@@ -54,16 +54,14 @@ public class MixUtils {
 
         return names.build().stream().map(n -> MixUtils.parseMixInfo(n, parts)).toList();
     }
-
-    // public static List<MixInfo> getMixPackage(String description, int pitchShift, double speedFactor) {
-    // }
-
     
     public static MixInfo parseMixInfo(String description, List<AudioPart> parts) {
         return MixInfo.builder()
             .name(description)
             .parts(parts)
             .mix(parseMix(description, parts))
+            .pitchShift(0)
+            .speedFactor(1.0)
             .build();
     }
     
