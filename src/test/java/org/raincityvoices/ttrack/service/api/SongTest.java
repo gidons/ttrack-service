@@ -13,7 +13,7 @@ public class SongTest {
     @Test
     public void test() throws JsonMappingException, JsonProcessingException {
         String json = """
-                {"title":"Hi Diddly Dum","shortTitle":"Diddly","arranger":"Billy Gard","key":"Bb","durationSec":100}
+                {"title":"Hi Diddly Dum","shortTitle":"Diddly","arranger":"Billy Gard","key":"Bb","voicing":"TTBB"}
                 """;
         Song song = JsonUtils.newMapper().readValue(json, Song.class);
         assertEquals(SongId.NONE, song.getId());
