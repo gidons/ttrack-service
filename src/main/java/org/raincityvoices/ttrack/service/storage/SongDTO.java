@@ -68,7 +68,6 @@ public class SongDTO extends BaseDTO {
             .arranger(song.getArranger())
             .key(song.getKey())
             .voicing(song.getVoicing())
-            .durationSec(song.getDurationSec())
             .build();
         dto.setETag(song.getETag());
         return dto;
@@ -83,7 +82,6 @@ public class SongDTO extends BaseDTO {
             .arranger(arranger)
             .key(key)
             .voicing(voicing)
-            .durationSec(durationSec)
             .eTag(eTag)
             .build();
     }

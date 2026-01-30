@@ -22,7 +22,7 @@ public class SongTest {
             .shortTitle("Diddly")
             .arranger("Billy Gard")
             .key("Bb")
-            .durationSec(100)
+            .voicing("TTBB")
             .build(), song);
     }
 }

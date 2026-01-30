@@ -4,6 +4,7 @@ import java.beans.Transient;
 import java.time.Instant;
 import java.util.List;
 
+import org.raincityvoices.ttrack.service.Conversions;
 import org.raincityvoices.ttrack.service.api.AudioTrack;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.api.MixTrack;
@@ -110,7 +111,7 @@ public class AudioTrackDTO extends BaseDTO {
             .audioMix(track.mix())
             .pitchShift(track.mixInfo().pitchShift())
             .speedFactor(track.mixInfo().speedFactor())
-            .parts(track.parts().stream().map(AudioPart::name).toList())
+            .parts(Conversions.toPartNames(track.parts()))
             .build();
     }
 

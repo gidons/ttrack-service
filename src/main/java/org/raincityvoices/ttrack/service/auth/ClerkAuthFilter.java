@@ -3,6 +3,7 @@ package org.raincityvoices.ttrack.service.auth;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.io.IOException;
+import java.net.http.HttpRequest;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -49,6 +51,27 @@ public class ClerkAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         log.info("Authenticating request");
+        Authentication auth = null;
+        if (isLocalhost(request)) {
+            log.info("Request from localhost. Automatically authenticating.");
+            auth = new SpoofAuthentication("spoof", "ADMIN");
+        }
+        if (auth == null) {
+            auth = attemptClerkAuth(request);
+        }
+        if (auth != null) {
+            SecurityContext secCtx = SecurityContextHolder.createEmptyContext();
+            secCtx.setAuthentication(auth);
+            SecurityContextHolder.setContext(secCtx);
+        }
+        filterChain.doFilter(request, response);
+    }
+
+    private boolean isLocalhost(HttpServletRequest request) {
+        return request.getRemoteAddr().equals("127.0.0.1") || request.getRemoteAddr().equals("0:0:0:0:0:0:0:1");
+    }
+
+    private Authentication attemptClerkAuth(HttpServletRequest request) {
         RequestState reqState = AuthenticateRequest.authenticateRequest(
             getHeaders(request), 
             AuthenticateRequestOptions.secretKey(clerkApiKey)
@@ -61,7 +84,7 @@ public class ClerkAuthFilter extends OncePerRequestFilter {
         if (reqState.isAuthenticated()) {
             if (reqState.claims().isEmpty()) {
                 log.warn("No claims provided for authenticated user!");
-                return;
+                return null;
             }
             Claims claims = reqState.claims().get();
             log.debug("All claims:");
@@ -72,11 +95,9 @@ public class ClerkAuthFilter extends OncePerRequestFilter {
                 log.error("Failed to fetch user info for authenticated user ID {}", claims.getSubject(), e);
             }
             log.debug("User: {}", user);
+            return new ClerkAuthentication(user);
         }
-        SecurityContext secCtx = SecurityContextHolder.createEmptyContext();
-        secCtx.setAuthentication(new ClerkAuthentication(user));
-        SecurityContextHolder.setContext(secCtx);
-        filterChain.doFilter(request, response);
+        return null;
     }
 
     private User fetchUser(String userId) {

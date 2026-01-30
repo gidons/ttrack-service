@@ -35,7 +35,7 @@ public class TimedTextData {
     public static class Entry {
         long timeMs;
         /** The text for each part. Use AudioPart.ALL to indicate that the text applies to all parts. */
-        Map<AudioPart, String> text;
+         Map<AudioPart, String> text;
     }
 
     @JsonCreator

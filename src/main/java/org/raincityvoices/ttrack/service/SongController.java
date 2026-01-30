@@ -2,8 +2,11 @@ package org.raincityvoices.ttrack.service;
 
 import java.io.IOException;
 import java.net.URI;
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -17,6 +20,7 @@ import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.api.Song;
+import org.raincityvoices.ttrack.service.api.Song.SongBuilder;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.api.TimedTextData;
 import org.raincityvoices.ttrack.service.async.AsyncTaskManager;
@@ -40,6 +44,7 @@ import org.raincityvoices.ttrack.service.storage.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.storage.TimedDataStorage;
+import org.raincityvoices.ttrack.service.storage.TimedDataStorage.TimedDataMetadata;
 import org.raincityvoices.ttrack.service.storage.TimedTextDTO;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
@@ -56,7 +61,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 import org.springframework.web.util.DefaultUriBuilderFactory;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.DefaultUriBuilderFactory.EncodingMode;
 
 import com.azure.core.annotation.QueryParam;
@@ -92,11 +99,33 @@ public class SongController {
     }
 
     @GetMapping
-    public List<Song> listSongs() {
-        return songStorage.listAllSongs()
-            .stream()
-            .map(SongDTO::toSong)
+    public List<Song> listSongs(@QueryParam("extended") boolean extended) {
+        List<SongDTO> songs = songStorage.listAllSongs();
+        return songs.parallelStream()
+            .map(dto -> toSong(dto, extended))
             .toList();
+    }
+
+    private Song toSong(SongDTO dto, boolean extended) {
+        Song rawSong = dto.toSong();
+        if (!extended) {
+            return rawSong;
+        }
+        String songId = dto.getId();
+        SongBuilder builder = rawSong.toBuilder();
+        List<AudioTrackDTO> parts = songStorage.listParts(Optional.of(songId));
+        builder.parts(parts.stream().map(AudioTrackDTO::getId).toList());
+        AudioTrackDTO allMix = songStorage.describeMix(songId, ALL_CHANNEL_MIX_ID);
+        if (allMix != null) {
+            builder.mediaUpdated(allMix.getUpdated());
+            builder.mediaUrl(mediaUrlProvider.getMediaUrl(allMix));
+        }
+        Instant lastUpdated = dataStorage.listDataForSong(songId).stream()
+            .map(TimedDataMetadata::getUpdated)
+            .max(Comparator.naturalOrder()).orElse(Instant.EPOCH);
+        builder.textDataUpdated(lastUpdated);
+        builder.textDataUrl(buildUrl(new SongId(songId), "text"));
+        return builder.build();
     }
 
     @PostMapping
@@ -108,13 +137,13 @@ public class SongController {
     }
 
     @GetMapping({"/{id}","/{id}/"})
-    public Song getSong(@PathVariable("id") SongId songId) {
+    public Song getSong(@PathVariable("id") SongId songId, @QueryParam("extended") boolean extended) {
         SongDTO dto = songStorage.describeSong(songId.value());
         log.debug("Song DTO: {}", dto);
         if (dto == null) {
             throw new NotFoundException("Song " + songId.value() + " not found.");
         }
-        return dto.toSong();
+        return toSong(dto, extended);
     }
 
     @PutMapping({"/{id}","/{id}/"})
@@ -501,5 +530,9 @@ public class SongController {
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Unexpected exception building URL with pathSegments: " + StringUtils.join(pathSegments, ","), e);
         }
+    }
+
+    private static UriComponentsBuilder getUriBuilder() {
+        return MvcUriComponentsBuilder.fromController(SongController.class);
     }
 }

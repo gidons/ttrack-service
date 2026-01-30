@@ -2,6 +2,7 @@ package org.raincityvoices.ttrack.service.storage;
 
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,20 @@ import lombok.extern.slf4j.Slf4j;
 public class BlobTimedDataStorage implements TimedDataStorage {
 
     private final BlobContainerClient dataContainerClient;
+
+    @Override
+    public List<TimedDataMetadata> listDataForSong(String songId) {
+        log.info("Listing all timed data for song {}", songId);
+        PagedIterable<BlobItem> items = dataContainerClient.listBlobsByHierarchy(songId + "/");
+        return items.stream()
+            .filter(item -> !item.isPrefix())
+            .map(item -> TimedDataMetadata.builder()
+                .type(StringUtils.substringAfter(item.getName(), "/"))
+                .created(item.getProperties().getCreationTime().toInstant())
+                .updated(item.getProperties().getLastModified().toInstant())
+                .build())
+            .toList();
+    }
 
     @Override
     public List<TimedTextDTO> getAllDataForSong(String songId) {

@@ -2,12 +2,13 @@ package org.raincityvoices.ttrack.service.storage;
 
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 import org.springframework.stereotype.Component;
 
-import com.azure.cosmos.implementation.guava25.base.Preconditions;
 import com.azure.data.tables.TableClient;
+import com.google.common.base.Preconditions;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -70,6 +71,26 @@ public class AzureTablesSongStorage implements SongStorage {
      */
     private String createIdForSong(SongDTO songDto) {
         return String.format("%08x", random.nextLong(0x100000000L));
+    }
+
+    @Override
+    public List<AudioTrackDTO> listParts(Optional<String> songId) {
+        log.info("Listing part tracks for {}", songId.map(id -> "song " + id).orElse("all songs"));
+        String query = "RowKey ne '' and not (Parts ne '')" +
+            songId.map(id -> " and PartitionKey eq '" + id + "'").orElse("");
+        log.info("Query: {}", query);
+        return trackDao.query(query
+        );
+    }
+
+    public List<AudioTrackDTO> listMixes(Optional<String> songId, Optional<String> mixName) {
+        log.info("Listing mix tracks: songId={}, mixName={}", songId.orElse("<all>"), mixName.orElse("<all>"));
+        String filter = String.format(
+            "Parts ne '' %s %s",
+            songId.map(id -> "and PartitionKey eq '" + id + "'").orElse(""),
+            mixName.map(n -> "and RowKey eq '" + n + "'").orElse("")
+        );
+        return trackDao.query(filter);
     }
 
     @Override

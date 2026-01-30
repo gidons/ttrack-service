@@ -18,6 +18,7 @@ import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.api.TimedTextData;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.SongDTO;
 import org.raincityvoices.ttrack.service.storage.TimedTextDTO;
 
 import com.azure.cosmos.implementation.guava25.collect.ImmutableMap;

@@ -3,7 +3,9 @@ package org.raincityvoices.ttrack.service.storage;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
+import java.util.Optional;
 
+import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.exceptions.ConflictException;
 
 public interface SongStorage {
@@ -19,6 +21,8 @@ public interface SongStorage {
     String writeSong(SongDTO songDto);
     boolean deleteSong(String songId);
     /** @return the metadata for all tracks created for the given song (empty list if none.) */
+    List<AudioTrackDTO> listParts(Optional<String> songId);
+    List<AudioTrackDTO> listMixes(Optional<String> songId, Optional<String> mixName);
     List<AudioTrackDTO> listTracksForSong(String songId);
     default List<AudioTrackDTO> listPartsForSong(String songId) {
         return listTracksForSong(songId).stream()
