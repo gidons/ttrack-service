@@ -31,8 +31,6 @@
   <logger name="org.raincityvoices.ttrack" level="INFO"/>
   <logger name="org.raincityvoices.ttrack.service.storage" level="INFO"/>
   <logger name="org.raincityvoices.ttrack.service.audio" level="INFO"/>
-  <logger name="org.raincityvoices.ttrack.service.audio.AudioMixingStream" level="WARN"/>
-  <logger name="org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter" level="INFO"/>
   <logger name="org.tritonus" level="INFO"/>
 
   <logger name="org.zalando.logbook" level="TRACE">

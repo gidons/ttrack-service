@@ -1,10 +1,11 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.storage.songs;
 
 import java.beans.Transient;
 
 import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.SongId;
+import org.raincityvoices.ttrack.service.storage.BaseDTO;
 import org.raincityvoices.ttrack.service.storage.mapper.PartitionKey;
 
 import com.google.common.base.MoreObjects;
@@ -82,7 +83,7 @@ public class SongDTO extends BaseDTO {
             .arranger(arranger)
             .key(key)
             .voicing(voicing)
-            .eTag(eTag)
+            .eTag(getETag())
             .build();
     }
 

@@ -19,10 +19,10 @@ import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 import org.raincityvoices.ttrack.service.model.TestData;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
-import org.raincityvoices.ttrack.service.storage.FileMetadata;
-import org.raincityvoices.ttrack.service.storage.MediaStorage;
-import org.raincityvoices.ttrack.service.storage.SongStorage;
+import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.media.MediaStorage;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.songs.SongStorage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 

@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.storage.songs;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 

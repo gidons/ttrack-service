@@ -25,8 +25,6 @@ public class TimedTextData {
     public static final String TYPE_BOOKMARKS = "BOOKMARKS";
     /** Measure starts: text is the measure number, e.g. "13". Note that these might not be unique (repeats). */
     public static final String TYPE_MEASURES = "MEASURES";
-    /** Key note frequency in Hz, e.g. "435" for a slightly flat A. */
-    public static final String KEY_FREQUENCY = "KEYFREQ";
 
     @Value
     @Builder
@@ -35,7 +33,7 @@ public class TimedTextData {
     public static class Entry {
         long timeMs;
         /** The text for each part. Use AudioPart.ALL to indicate that the text applies to all parts. */
-         Map<AudioPart, String> text;
+        Map<AudioPart, String> text;
     }
 
     @JsonCreator

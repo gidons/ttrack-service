@@ -11,8 +11,8 @@ import org.raincityvoices.ttrack.service.SongController;
 import org.raincityvoices.ttrack.service.async.AsyncTaskManager.TaskExec;
 import org.raincityvoices.ttrack.service.async.ZipTracksTask.Output;
 import org.raincityvoices.ttrack.service.model.TestData;
-import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.storage.TempFileStorage;
+import org.raincityvoices.ttrack.service.storage.songs.SongStorage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 

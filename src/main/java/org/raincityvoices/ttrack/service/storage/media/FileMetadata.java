@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.storage.media;
 
 import javax.sound.sampled.AudioFileFormat;
 

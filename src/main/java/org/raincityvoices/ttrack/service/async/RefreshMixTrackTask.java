@@ -1,6 +1,6 @@
 package org.raincityvoices.ttrack.service.async;
 
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.util.PrototypeBean;
 
 import lombok.extern.slf4j.Slf4j;

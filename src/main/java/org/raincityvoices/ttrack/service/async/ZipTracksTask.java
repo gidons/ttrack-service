@@ -9,13 +9,13 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.IOUtils;
-import org.raincityvoices.ttrack.service.storage.FileMetadata;
-import org.raincityvoices.ttrack.service.storage.MediaContent;
-import org.raincityvoices.ttrack.service.storage.MediaStorage;
-import org.raincityvoices.ttrack.service.storage.SongDTO;
-import org.raincityvoices.ttrack.service.storage.SongStorage;
 import org.raincityvoices.ttrack.service.storage.TempFileStorage;
 import org.raincityvoices.ttrack.service.storage.mapper.Property;
+import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.media.MediaContent;
+import org.raincityvoices.ttrack.service.storage.media.MediaStorage;
+import org.raincityvoices.ttrack.service.storage.songs.SongDTO;
+import org.raincityvoices.ttrack.service.storage.songs.SongStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.raincityvoices.ttrack.service.util.PrototypeBean;
 import org.raincityvoices.ttrack.service.util.Temp;

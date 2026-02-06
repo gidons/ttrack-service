@@ -3,8 +3,8 @@ package org.raincityvoices.ttrack.service.async;
 import org.raincityvoices.ttrack.service.Conversions;
 import org.raincityvoices.ttrack.service.MediaUrlProvider;
 import org.raincityvoices.ttrack.service.api.MixInfo;
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.mapper.Property;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.util.PrototypeBean;
 
 import lombok.Data;

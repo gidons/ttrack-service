@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.storage.media;
 
 import static org.hamcrest.Matchers.oneOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,8 +11,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.hamcrest.MockitoHamcrest.argThat;
-import static org.raincityvoices.ttrack.service.storage.DiskCachingMediaStorage.DOWNLOAD_FILE_SUFFIX;
-import static org.raincityvoices.ttrack.service.storage.DiskCachingMediaStorage.UPLOAD_FILE_SUFFIX;
+import static org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage.DOWNLOAD_FILE_SUFFIX;
+import static org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage.UPLOAD_FILE_SUFFIX;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -29,7 +29,10 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
-import org.raincityvoices.ttrack.service.storage.DiskCachingMediaStorage.RemoteStorage;
+import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage;
+import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.media.MediaContent;
+import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage.RemoteStorage;
 import org.raincityvoices.ttrack.service.util.FileManager;
 
 public class DiskCachingMediaStorageTest {

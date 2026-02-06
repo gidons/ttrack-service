@@ -2,9 +2,9 @@ package org.raincityvoices.ttrack.service.async;
 
 import java.util.List;
 
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
-import org.raincityvoices.ttrack.service.storage.SongDTO;
-import org.raincityvoices.ttrack.service.storage.SongStorage;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.songs.SongDTO;
+import org.raincityvoices.ttrack.service.storage.songs.SongStorage;
 import org.raincityvoices.ttrack.service.util.PrototypeBean;
 import org.springframework.beans.factory.annotation.Autowired;
 

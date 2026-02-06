@@ -1,9 +1,16 @@
 package org.raincityvoices.ttrack.service.async;
 
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
-import org.raincityvoices.ttrack.service.storage.MediaContent;
-import org.raincityvoices.ttrack.service.util.PrototypeBean;
+import java.time.Duration;
+import java.util.List;
 
+import org.raincityvoices.ttrack.service.storage.media.MediaContent;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.util.PrototypeBean;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.azure.ai.speech.transcription.TranscriptionClient;
+import com.azure.ai.speech.transcription.models.TranscriptionOptions;
+import com.azure.ai.speech.transcription.models.TranscriptionResult;
 import com.google.common.base.Preconditions;
 
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +23,11 @@ import lombok.extern.slf4j.Slf4j;
 @PrototypeBean
 public class ProcessUploadedPartTask extends AudioTrackTask<AudioTrackTask.Input, AudioTrackTask.Output> {
 
+    private static final Duration TRANSCRIPTION_TIMEOUT = Duration.ofMinutes(10);
     private final String mediaLocation;
+
+    @Autowired
+    private TranscriptionClient transcriptionClient;
 
     ProcessUploadedPartTask(AudioTrackDTO track) {
         super(new Input(track));
@@ -45,8 +56,18 @@ public class ProcessUploadedPartTask extends AudioTrackTask<AudioTrackTask.Input
 
     @Override
     protected Output processTrack() throws Exception {
-        MediaContent media = mediaStorage().getMedia(track().getMediaLocation());
+        String location = track().getMediaLocation();
+        MediaContent media = mediaStorage().getMedia(location);
         track().updateFileMetadata(media.metadata());
+        log.info("Requesting transcription of track {}", track().getFqId());
+        try {
+            TranscriptionResult result = transcriptionClient.transcribe(
+                new TranscriptionOptions(mediaStorage().getDownloadUrl(location, TRANSCRIPTION_TIMEOUT))
+                .setLocales(List.of("en-US")));
+            log.info("Transcription result:\n" + result.toJsonString());
+        } catch(Exception e) {
+            log.atError().setCause(e).log("Transcription of track {} failed", track().getFqId());
+        }
         return new Output();
     }
 }

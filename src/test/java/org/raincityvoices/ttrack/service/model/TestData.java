@@ -9,8 +9,8 @@ import java.util.List;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.audio.MixUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO.AudioTrackDTOBuilder;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO.AudioTrackDTOBuilder;
 
 import com.google.common.collect.ImmutableList;
 

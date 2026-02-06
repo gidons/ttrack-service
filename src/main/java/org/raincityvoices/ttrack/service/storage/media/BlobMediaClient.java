@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.storage.media;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -9,6 +9,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.time.Duration;
 
+import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage.RemoteStorage;
 import org.springframework.stereotype.Component;
 
 import com.azure.storage.blob.BlobClient;

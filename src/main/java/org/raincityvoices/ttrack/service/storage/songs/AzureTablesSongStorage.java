@@ -1,10 +1,11 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.storage.songs;
 
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
+import org.raincityvoices.ttrack.service.storage.BaseTablesDAO;
 import org.springframework.stereotype.Component;
 
 import com.azure.data.tables.TableClient;

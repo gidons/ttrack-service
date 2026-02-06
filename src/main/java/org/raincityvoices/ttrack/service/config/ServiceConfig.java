@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.time.Clock;
 
 import org.apache.commons.io.FileUtils;
-import org.raincityvoices.ttrack.service.storage.DiskCachingMediaStorage;
-import org.raincityvoices.ttrack.service.storage.DiskCachingMediaStorage.RemoteStorage;
-import org.raincityvoices.ttrack.service.storage.MediaStorage;
+import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage;
+import org.raincityvoices.ttrack.service.storage.media.MediaStorage;
+import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage.RemoteStorage;
 import org.raincityvoices.ttrack.service.util.DefaultFileManager;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.springframework.boot.context.properties.ConfigurationProperties;

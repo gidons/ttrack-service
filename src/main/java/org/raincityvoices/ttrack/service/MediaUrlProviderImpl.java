@@ -3,8 +3,8 @@ package org.raincityvoices.ttrack.service;
 import java.net.URI;
 import java.time.Duration;
 
-import org.raincityvoices.ttrack.service.storage.AudioTrackDTO;
-import org.raincityvoices.ttrack.service.storage.MediaStorage;
+import org.raincityvoices.ttrack.service.storage.media.MediaStorage;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;

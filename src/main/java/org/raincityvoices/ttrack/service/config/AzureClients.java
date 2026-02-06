@@ -4,6 +4,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.azure.ai.speech.transcription.TranscriptionClient;
+import com.azure.ai.speech.transcription.TranscriptionClientBuilder;
 import com.azure.data.tables.TableClient;
 import com.azure.data.tables.TableClientBuilder;
 import com.azure.identity.DefaultAzureCredential;
@@ -14,6 +16,7 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobContainerClientBuilder;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
 
 import lombok.Data;
 import lombok.Getter;
@@ -96,6 +99,14 @@ public class AzureClients {
         return new SecretClientBuilder()
             .credential(defaultCredential())
             .vaultUrl("https://ttracksecrets.vault.azure.net/")
+            .buildClient();
+    }
+
+    @Bean
+    public TranscriptionClient trancriptionClient() {
+        return new TranscriptionClientBuilder()
+            .credential(defaultCredential())
+            .endpoint("https://shavit-ttrack.cognitiveservices.azure.com/")
             .buildClient();
     }
 }

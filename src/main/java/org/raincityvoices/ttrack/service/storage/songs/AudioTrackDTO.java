@@ -1,4 +1,4 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.storage.songs;
 
 import java.beans.Transient;
 import java.time.Instant;
@@ -11,10 +11,12 @@ import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.audio.model.AudioMix;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
+import org.raincityvoices.ttrack.service.storage.BaseDTO;
 import org.raincityvoices.ttrack.service.storage.mapper.PartitionKey;
 import org.raincityvoices.ttrack.service.storage.mapper.Property;
 import org.raincityvoices.ttrack.service.storage.mapper.RowKey;
 import org.raincityvoices.ttrack.service.storage.mapper.Timestamp;
+import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
 
 import com.microsoft.applicationinsights.core.dependencies.apachecommons.lang3.StringUtils;
 

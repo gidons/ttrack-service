@@ -8,7 +8,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.model.TestData;
-import org.raincityvoices.ttrack.service.storage.TimedTextDTO.Entry;
+import org.raincityvoices.ttrack.service.storage.timeddata.BlobTimedDataStorage;
+import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO;
+import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO.Entry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
