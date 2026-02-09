@@ -1,14 +1,12 @@
 package org.raincityvoices.ttrack.service;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toMap;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.raincityvoices.ttrack.service.api.MixInfo;
@@ -16,13 +14,10 @@ import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.api.TimedTextData;
+import org.raincityvoices.ttrack.service.api.TimedTextData.DataType;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
-import org.raincityvoices.ttrack.service.storage.songs.SongDTO;
 import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO;
-
-import com.azure.cosmos.implementation.guava25.collect.ImmutableMap;
-import com.azure.cosmos.implementation.guava25.collect.ImmutableMap.Builder;
 
 /**
  * Conversions between API and internal types.
@@ -77,66 +72,37 @@ public class Conversions {
     }
 
     public static TimedTextData toTimedTextData(List<TimedTextDTO> dtos) {
-        Map<String, List<TimedTextData.Entry>> map = dtos.stream()
-            .collect(toImmutableMap(
-                dto -> dto.type(),
-                (dto) -> {
-                    AudioPart[] parts = Stream.of(dto.parts()).map(AudioPart::new).toList().toArray(new AudioPart[0]);
-                    return dto.entries().stream()
-                        .map(e -> toTimedTextEntry(e, parts))
-                        .collect(toImmutableList());
-                }
-            ));
+        Map<AudioPart, Map<DataType, List<TimedTextData.Entry>>> map = dtos.stream()
+            .collect(groupingBy(dto -> new AudioPart(dto.part()), 
+                toMap(dto -> DataType.of(dto.type()), 
+                    dto -> dto.entries().stream()
+                            .map(e -> new TimedTextData.Entry(e.t(), e.v()))
+                            .toList()
+                        )
+                    )
+                );
         return TimedTextData.builder()
-            .entriesByType(map)
+            .byPart(map)
             .build();
     }
 
-    private static TimedTextData.Entry toTimedTextEntry(TimedTextDTO.Entry e, AudioPart[] parts) {
-        Builder<AudioPart, String> text = ImmutableMap.<AudioPart,String>builder();
-        for (int i = 0; i < parts.length; ++i) {
-            String value = e.v(i);
-            if (value != null) { text.put(parts[i], value); }
-        }
-        return TimedTextData.Entry.builder()
-            .timeMs(e.t())
-            .text(text.build())
-            .build();
+    public static List<TimedTextData.Entry> toTimedTextEntries(TimedTextDTO dto) {
+        return dto.entries().stream().map(e -> new TimedTextData.Entry(e.t(), e.v())).toList();
     }
 
     static List<TimedTextDTO> fromTimedTextData(TimedTextData data) {
-        return data.entriesByType().entrySet().stream().map(e -> fromTimedTextDataType(e.getKey(), e.getValue())).toList();
+        return data.byPart().entrySet().stream().flatMap(pe -> 
+            pe.getValue().entrySet().stream().map(te -> 
+                fromTimedTextEntries(pe.getKey(), te.getKey(), te.getValue())
+            )
+        ).toList();
     }
 
-    private static TimedTextDTO fromTimedTextDataType(String type, List<TimedTextData.Entry> entries) {
-        Set<AudioPart> partSet = entries.stream()
-            .flatMap(e -> e.text().keySet().stream())
-            .collect(Collectors.toSet());
-        partSet.remove(AudioPart.ALL);
-        partSet.remove(AudioPart.NONE);
-        AudioPart[] parts = partSet.toArray(new AudioPart[0]);
-
+    static TimedTextDTO fromTimedTextEntries(AudioPart part, DataType type, List<TimedTextData.Entry> entries) {
         return TimedTextDTO.builder()
-            .type(type)
-            .parts(toPartNames(parts))
-            .entries(entries.stream().map(e -> fromTimedTextDataEntry(e, parts)).collect(toImmutableList()))
+            .part(part.name())
+            .type(type.value())
+            .entries(entries.stream().map(e -> new TimedTextDTO.Entry(e.t(), e.v())).toList())
             .build();
     }
-
-    private static TimedTextDTO.Entry fromTimedTextDataEntry(TimedTextData.Entry e, AudioPart[] parts) {
-        String allText = e.text().get(AudioPart.ALL);
-        String[] partTexts = null;
-        if (allText == null) {
-            partTexts = new String[parts.length];
-            for (int i = 0; i < parts.length; ++i) {
-                partTexts[i] = e.text().get(parts[i]);
-            }
-        }
-        return TimedTextDTO.Entry.builder()
-            .t(e.timeMs())
-            .u(allText)
-            .p(partTexts)
-            .build();
-    }
-
 }

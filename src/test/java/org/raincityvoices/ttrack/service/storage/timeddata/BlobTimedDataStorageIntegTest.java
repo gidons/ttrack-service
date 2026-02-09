@@ -1,20 +1,20 @@
-package org.raincityvoices.ttrack.service.storage;
+package org.raincityvoices.ttrack.service.storage.timeddata;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.model.TestData;
-import org.raincityvoices.ttrack.service.storage.timeddata.BlobTimedDataStorage;
-import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO;
 import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO.Entry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import com.azure.cosmos.implementation.guava25.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,33 +41,29 @@ public class BlobTimedDataStorageIntegTest {
         assertEquals(List.of(), existing);
         TimedTextDTO dto1 = TimedTextDTO.builder()
             .type(DATA_TYPE_1)
-            .parts(new String[] { "Bass", "Lead" })
+            .part("Bass")
             .entries(ImmutableList.of(
-                Entry.builder().t(123).u("foo").build(),
-                Entry.builder().t(234).p("foo","bar").build(),
-                Entry.builder().t(345).u("bar").build(),
-                Entry.builder().t(456).p("bar", "foo").build()
+                new Entry(123, "foo"),
+                new Entry(234, "bar")
             ))
             .build();
         TimedTextDTO dto2 = TimedTextDTO.builder()
             .type(DATA_TYPE_2)
-            .parts(new String[] { "Bari", "Tenor" })
+            .part("Bari")
             .entries(ImmutableList.of(
-                Entry.builder().t(123).u("FOO").build(),
-                Entry.builder().t(234).p("FOO","BAR").build(),
-                Entry.builder().t(345).u("BAR").build(),
-                Entry.builder().t(456).p("BAR", "FOO").build()
+                new Entry(345, "FOO"),
+                new Entry(456, "BAR")
             ))
             .build();
         storage.putDataForSong(SONG_ID, dto1);
         storage.putDataForSong(SONG_ID, dto2);
 
         List<TimedTextDTO> actual = storage.getAllDataForSong(SONG_ID);
-        assertEquals(List.of(dto1, dto2), actual);
+        assertEquals(Set.of(dto1, dto2), ImmutableSet.copyOf(actual));
     }
 
     private void cleanup() {
-        storage.deleteData(SONG_ID, DATA_TYPE_1);
-        storage.deleteData(SONG_ID, DATA_TYPE_2);
+        storage.deleteData(SONG_ID, "Bass", DATA_TYPE_1);
+        storage.deleteData(SONG_ID, "Bari", DATA_TYPE_2);
     }
 }

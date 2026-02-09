@@ -21,6 +21,7 @@ import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.Song.SongBuilder;
+import org.raincityvoices.ttrack.service.api.TimedTextData.DataType;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.api.TimedTextData;
 import org.raincityvoices.ttrack.service.async.AsyncTaskManager;
@@ -85,6 +86,7 @@ public class SongController {
      * The default mix that has one part per channel.
     */
     public static final String ALL_CHANNEL_MIX_ID = "All";
+    public static final String NOTATION_FILE_ID = "__notation__";
 
     private final SongStorage songStorage;
     private final TimedDataStorage dataStorage;
@@ -120,6 +122,13 @@ public class SongController {
             builder.mediaUpdated(allMix.getUpdated());
             builder.mediaUrl(mediaUrlProvider.getMediaUrl(allMix));
         }
+        String notationLocation = mediaStorage.locationFor(songId, NOTATION_FILE_ID);
+        if (mediaStorage.exists(notationLocation)) {
+            MediaContent notation = mediaStorage.getMedia(notationLocation);
+            log.info("Notation metadata: {}", notation.metadata());
+            builder.notationUpdated(notation.metadata().updated());
+            builder.notationUrl(mediaUrlProvider.getMediaUrl(songId, NOTATION_FILE_ID));
+        }
         Instant lastUpdated = dataStorage.listDataForSong(songId).stream()
             .map(TimedDataMetadata::getUpdated)
             .max(Comparator.naturalOrder()).orElse(Instant.EPOCH);
@@ -154,6 +163,13 @@ public class SongController {
         SongDTO dto = SongDTO.fromSong(song);
         songStorage.writeSong(dto);
         return dto.toSong();
+    }
+
+    @PutMapping({"/{id}/notation","/{id}/notation/"})
+    public void uploadNotationFile(@PathVariable("id") SongId songId, @RequestParam("file") MultipartFile file) throws IOException, UnsupportedAudioFileException {
+        MediaContent content = MediaContent.fromMultipartFile(file);
+        log.info("Inferred notation file metadata: {}", content.metadata());
+        mediaStorage.putMedia(mediaStorage.locationFor(songId, NOTATION_FILE_ID), content);
     }
 
     @GetMapping({"/{id}/parts","/{id}/parts/"})
@@ -374,8 +390,34 @@ public class SongController {
         return Conversions.toTimedTextData(dtos);
     }
 
+    @GetMapping({"/{id}/parts/{partName}/text","/{id}/parts/{partName}/text/"})
+    public TimedTextData getTimedDataForPart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part) {
+        List<TimedTextDTO> dtos = dataStorage.getAllDataForPart(songId.value(), part.name());
+        return Conversions.toTimedTextData(dtos);
+    }
+
+    @GetMapping({"/{id}/parts/{partName}/text/{type}","/{id}/parts/{partName}/text/{type}/"})
+    public List<TimedTextData.Entry> getTimedDataForPartAndType(@PathVariable("id") SongId songId, 
+                                                    @PathVariable("partName") AudioPart part,
+                                                    @PathVariable("type") DataType type) {
+        TimedTextDTO dto = dataStorage.getDataForPart(songId.value(), part.name(), type.value());
+        if (dto == null) {
+            return ImmutableList.of();
+        }
+        return Conversions.toTimedTextEntries(dto);
+    }
+
+    @PutMapping({"/{id}/parts/{partName}/text/{type}","/{id}/parts/{partName}/text/{type}/"})
+    public void updateTimedDataForPartAndType(@PathVariable("id") SongId songId, 
+                                              @PathVariable("partName") AudioPart part,
+                                              @PathVariable("type") DataType type,
+                                            @RequestBody List<TimedTextData.Entry> entries) {
+        TimedTextDTO dto = Conversions.fromTimedTextEntries(part, type, entries);                                             
+        dataStorage.putDataForSong(songId.value(), dto);
+    }
+
     @PutMapping({"{id}/text", "/{id}/text/"})
-    public void putMethodName(@PathVariable("id") SongId songId, @RequestBody TimedTextData entity) {
+    public void updateTimedTextData(@PathVariable("id") SongId songId, @RequestBody TimedTextData entity) {
         List<TimedTextDTO> dtos = Conversions.fromTimedTextData(entity);
         dtos.forEach(dto -> dataStorage.putDataForSong(songId.value(), dto));   
     }

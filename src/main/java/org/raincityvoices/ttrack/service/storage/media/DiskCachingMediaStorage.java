@@ -10,8 +10,8 @@ import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantLock;
 
-import javax.sound.sampled.UnsupportedAudioFileException;
-
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.files.RemoteFileStorage;
 import org.raincityvoices.ttrack.service.util.AutoLock;
 import org.raincityvoices.ttrack.service.util.DefaultFileManager;
 import org.raincityvoices.ttrack.service.util.FileManager;
@@ -27,25 +27,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class DiskCachingMediaStorage implements MediaStorage {
 
-    public interface RemoteStorage {
-        boolean exists(String location);
-        /** 
-         * Download the media from the given location to the destination, if it has a new etag.
-         * @return the metadata from the remote storage, or null if the media doesn't exist.
-         * TODO replace null return value with specific exception?
-         */
-        FileMetadata downloadMedia(String location, FileMetadata currentMetadata, File destination);
-        FileMetadata fetchMetadata(String location);
-        String getDownloadUrl(String location, Duration timeout);
-        void uploadMedia(File source, String location);
-        void updateMetadata(FileMetadata metadata, String location);
-        void deleteMedia(String mediaLocation);
-    }
-    
     static final String UPLOAD_FILE_SUFFIX = "upload";
     static final String DOWNLOAD_FILE_SUFFIX = "download";
     
-    private final RemoteStorage remote;
+    private final RemoteFileStorage remote;
     private final File cacheDir;
     private final FileManager fileManager;
     
@@ -54,11 +39,11 @@ public class DiskCachingMediaStorage implements MediaStorage {
         .concurrencyLevel(10)
         .build(CacheLoader.from(l -> new CachingMediaClient(l)));
     
-    public DiskCachingMediaStorage(RemoteStorage remoteStorage, File cacheDir) {
+    public DiskCachingMediaStorage(RemoteFileStorage remoteStorage, File cacheDir) {
         this(remoteStorage, cacheDir, new DefaultFileManager());
     }
     
-    public DiskCachingMediaStorage(RemoteStorage remoteStorage, File cacheDir, FileManager fileManager) {
+    public DiskCachingMediaStorage(RemoteFileStorage remoteStorage, File cacheDir, FileManager fileManager) {
         this.remote = remoteStorage;
         this.cacheDir = cacheDir;
         this.fileManager = fileManager;
@@ -103,8 +88,12 @@ public class DiskCachingMediaStorage implements MediaStorage {
 
         private void downloadIfNecessary() {
             try(AutoLock al = new AutoLock(lock)) {
+                if (localFile != null && !fileManager.exists(localFile)) {
+                    log.info("Local file {} does not exist. Clearing metadata to force update.", localFile);
+                    metadata = FileMetadata.UNKNOWN;
+                }
                 File downloadFile = mediaFile(DOWNLOAD_FILE_SUFFIX);
-                FileMetadata remoteMetadata = remote.downloadMedia(mediaLocation, metadata, downloadFile);
+                FileMetadata remoteMetadata = remote.download(mediaLocation, metadata, downloadFile);
                 if (remoteMetadata == null) {
                     // Media deleted
                     log.info("Media for {} no longer available on remote storage.", mediaLocation);
@@ -116,7 +105,7 @@ public class DiskCachingMediaStorage implements MediaStorage {
                             metadata.lengthBytes(), remoteMetadata.lengthBytes()
                         );
                         deleteFromCache();
-                        remoteMetadata = remote.downloadMedia(mediaLocation, FileMetadata.UNKNOWN, downloadFile);
+                        remoteMetadata = remote.download(mediaLocation, FileMetadata.UNKNOWN, downloadFile);
                     } else {
                         log.info("Media for {} has not changed since last downloaded.", mediaLocation);
                         return;
@@ -134,7 +123,10 @@ public class DiskCachingMediaStorage implements MediaStorage {
                     throw new RuntimeException("Failed to rename " + tempFile + " to " + newFile);
                 }
             }
-            FileMetadata inferredMetadata = inferMediaMetadata(newFile);
+            FileMetadata inferredMetadata = FileMetadata.fromTempFile(newFile, fileManager)
+                // Ignore some attributes that are almost guaranteed to be wrong
+                .withFileName(null)
+                .withUpdated(null);
             metadata = remoteMetadata.updateFrom(inferredMetadata);
             localFile = newFile;
         }
@@ -152,13 +144,13 @@ public class DiskCachingMediaStorage implements MediaStorage {
                 } catch (IOException e) {
                     throw new RuntimeException("Failed to write media to disk at " + uploadFile, e);
                 }
-                FileMetadata mediaMetadata = inferMediaMetadata(uploadFile);
+                FileMetadata mediaMetadata = FileMetadata.fromFile(uploadFile, fileManager);
                 // Combine whatever metadata we had before with newly-provided and inferred metadata
-                this.metadata = metadata.updateFrom(content.metadata()).updateFrom(mediaMetadata);
+                this.metadata = metadata.updateFrom(mediaMetadata).updateFrom(content.metadata());
                 // TODO do this asynchronously? Maybe have a background thread that flushes uploads?
                 try {
                     log.info("Uploading media to {}...", mediaLocation);
-                    remote.uploadMedia(uploadFile, mediaLocation);
+                    remote.upload(uploadFile, mediaLocation);
                     // Update metadata with what can be inferred from file
                     remote.updateMetadata(metadata, mediaLocation);
                 } catch(Exception e) {
@@ -180,7 +172,7 @@ public class DiskCachingMediaStorage implements MediaStorage {
             try {
                 log.info("Deleting media for {}", mediaLocation);
                 deleteFromCache();
-                remote.deleteMedia(mediaLocation);
+                remote.delete(mediaLocation);
                 // reset the metadata, including ETag, so the media will be downloaded if recreated later.
                 metadata = FileMetadata.UNKNOWN;
                 return true;
@@ -192,17 +184,6 @@ public class DiskCachingMediaStorage implements MediaStorage {
         public void deleteFromCache() {
             if (localFile != null && fileManager.exists(localFile)) {
                 fileManager.delete(localFile);
-            }
-        }
-
-        private FileMetadata inferMediaMetadata(File file) {
-            try {
-                FileMetadata inferred = FileMetadata.fromAudioFileFormat(fileManager.getAudioFileFormat(file));
-                log.debug("Inferred metadata: {}", metadata);
-                return inferred;
-            } catch (IOException | UnsupportedAudioFileException e) {
-                log.error("Unable to infer metadata from media file {}", file);
-                return FileMetadata.UNKNOWN;
             }
         }
 
@@ -250,8 +231,6 @@ public class DiskCachingMediaStorage implements MediaStorage {
     public void clearCache() {
         
     }
-
-    
 
     @VisibleForTesting
     File mediaFile(String mediaLocation, String suffix) {

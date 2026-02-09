@@ -41,6 +41,8 @@ public class Song implements UriContainer<Song> {
     Instant mediaUpdated;
     URI textDataUrl;
     Instant textDataUpdated;
+    URI notationUrl;
+    Instant notationUpdated;
 
     @Override
     public Song useBaseUrl(String baseUrl) {

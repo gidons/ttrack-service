@@ -11,6 +11,9 @@ import java.io.OutputStream;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFileFormat.Type;
+
+import org.apache.commons.io.FileUtils;
+
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
@@ -50,6 +53,10 @@ public class DefaultFileManager implements FileManager {
     @Override
     public boolean rename(File oldName, File newName) {
         return oldName.renameTo(newName);
+    }
+    @Override
+    public long getLengthBytes(File file) {
+        return file.isFile() ? FileUtils.sizeOf(file) : 0;
     }
     @Override
     public Temp.File tempFile(String prefix, String suffix) throws IOException {

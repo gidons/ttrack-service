@@ -17,15 +17,16 @@ import lombok.experimental.Accessors;
 @Builder
 @Accessors(fluent = true)
 @Getter(onMethod=@__(@JsonProperty()))
-public class TimedTextDTO {
+public class TimedTextDTONew {
 
     @Value
+    @Builder
     @Accessors(fluent = true)
     @Getter(onMethod=@__(@JsonProperty()))
     public static class Entry {
         /** Time after song start, in milliseconds. */
         long t;
-        /** Text value. */
+        /** Text content (value) */
         String v;
     }
 
@@ -38,7 +39,7 @@ public class TimedTextDTO {
      */
     String type;
     /**
-     * The audio parts this data applies to, in order.
+     * The audio part this data applies to.
      */
     String part;
     /**

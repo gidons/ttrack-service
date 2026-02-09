@@ -27,9 +27,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.model.TestData;
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.media.BlobMediaClient;
 import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage;
-import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.media.MediaContent;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +59,7 @@ public class DiskCachingMediaStorageIntegTest {
     @AfterEach
     public void cleanup() {
         mediaStorage.deleteFromCache(LOCATION);
-        blobClient.deleteMedia(LOCATION);
+        blobClient.delete(LOCATION);
     }
 
     private class DownloadTask implements Callable<FileMetadata> {

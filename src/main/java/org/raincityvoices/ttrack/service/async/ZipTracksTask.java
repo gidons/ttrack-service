@@ -10,8 +10,8 @@ import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.IOUtils;
 import org.raincityvoices.ttrack.service.storage.TempFileStorage;
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.mapper.Property;
-import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.media.MediaContent;
 import org.raincityvoices.ttrack.service.storage.media.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.songs.SongDTO;

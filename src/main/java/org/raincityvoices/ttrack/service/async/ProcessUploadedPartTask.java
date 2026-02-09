@@ -3,9 +3,13 @@ package org.raincityvoices.ttrack.service.async;
 import java.time.Duration;
 import java.util.List;
 
+import org.raincityvoices.ttrack.service.api.TimedTextData;
 import org.raincityvoices.ttrack.service.storage.media.MediaContent;
 import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.storage.timeddata.TimedDataStorage;
+import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO;
 import org.raincityvoices.ttrack.service.util.PrototypeBean;
+import org.raincityvoices.ttrack.service.util.TranscriptionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.azure.ai.speech.transcription.TranscriptionClient;
@@ -28,6 +32,8 @@ public class ProcessUploadedPartTask extends AudioTrackTask<AudioTrackTask.Input
 
     @Autowired
     private TranscriptionClient transcriptionClient;
+    @Autowired
+    private TimedDataStorage timedDataStorage;
 
     ProcessUploadedPartTask(AudioTrackDTO track) {
         super(new Input(track));
@@ -64,7 +70,14 @@ public class ProcessUploadedPartTask extends AudioTrackTask<AudioTrackTask.Input
             TranscriptionResult result = transcriptionClient.transcribe(
                 new TranscriptionOptions(mediaStorage().getDownloadUrl(location, TRANSCRIPTION_TIMEOUT))
                 .setLocales(List.of("en-US")));
-            log.info("Transcription result:\n" + result.toJsonString());
+            log.info("Transcription result: {} words", result.getPhrases().stream().mapToInt(p -> p.getWords().size()).sum());
+            List<TimedTextDTO.Entry> lyricEntries = TranscriptionUtils.getLyrics(result);
+            log.debug("Lyrics: {} entries (including EOLs)", lyricEntries.size());
+            timedDataStorage.putDataForSong(songId(), TimedTextDTO.builder()
+                                                                  .part(track().getId())
+                                                                  .type(TimedTextData.TYPE_LYRICS.value())
+                                                                  .entries(lyricEntries)
+                                                                  .build());
         } catch(Exception e) {
             log.atError().setCause(e).log("Transcription of track {} failed", track().getFqId());
         }

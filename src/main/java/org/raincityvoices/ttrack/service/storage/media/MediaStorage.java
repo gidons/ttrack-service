@@ -3,7 +3,12 @@ package org.raincityvoices.ttrack.service.storage.media;
 import java.time.Duration;
 
 import org.raincityvoices.ttrack.service.api.SongId;
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
 
+/**
+ * A storage mechanism for files with media type and other metadata.
+ */
 public interface MediaStorage {
 
     boolean exists(String mediaLocation);
@@ -16,10 +21,13 @@ public interface MediaStorage {
      */
     boolean deleteMedia(String mediaLocation);
     String getDownloadUrl(String mediaLocation, Duration timeout);
-    default String locationFor(SongId songId, String trackId) {
-        return locationFor(songId.value(), trackId);
+    default String locationFor(AudioTrackDTO trackDto) {
+        return locationFor(trackDto.getSongId(), trackDto.getId());
     }
-    default String locationFor(String songId, String trackId) {
-        return String.format("%s/%s", songId, trackId);
+    default String locationFor(SongId songId, String fileId) {
+        return locationFor(songId.value(), fileId);
+    }
+    default String locationFor(String songId, String fileId) {
+        return String.format("%s/%s", songId, fileId);
     }
 }

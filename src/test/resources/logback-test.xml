@@ -27,6 +27,7 @@
     <appender-ref ref="CONSOLE" />
     <appender-ref ref="FILE"/>
   </root>
+  <logger name="org.raincityvoices.ttrack.service.storage.timeddata" level="DEBUG"/>
   <logger name="org.raincityvoices.ttrack.service.audio.AudioMixingStream" level="WARN"/>
   <logger name="org.raincityvoices.ttrack.service.async.AzureTablesAsyncTaskStorage" level="INFO"/>
   <logger name="org.raincityvoices.ttrack.service.storage.BaseTablesDAO" level="INFO"/>

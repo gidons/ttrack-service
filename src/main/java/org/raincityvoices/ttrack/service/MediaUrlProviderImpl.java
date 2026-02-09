@@ -21,8 +21,7 @@ public class MediaUrlProviderImpl implements MediaUrlProvider {
 
     private final MediaStorage mediaStorage;
 
-    public URI getMediaUrl(AudioTrackDTO dto) {
-        if (dto == null || dto.getMediaLocation() == null) { return null; }
-        return URI.create(mediaStorage.getDownloadUrl(dto.getMediaLocation(), MEDIA_URL_VALIDITY));        
+    public URI getMediaUrl(String songId, String fileId) {
+        return URI.create(mediaStorage.getDownloadUrl(mediaStorage.locationFor(songId, fileId), MEDIA_URL_VALIDITY));        
     }
 }

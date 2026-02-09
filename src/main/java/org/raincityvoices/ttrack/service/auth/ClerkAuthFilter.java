@@ -3,7 +3,6 @@ package org.raincityvoices.ttrack.service.auth;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.io.IOException;
-import java.net.http.HttpRequest;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +28,7 @@ import com.google.common.cache.LoadingCache;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +50,7 @@ public class ClerkAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        log.info("Authenticating request");
+        log.info("Authenticating request: {}", request.getRequestURL());
         Authentication auth = null;
         if (isLocalhost(request)) {
             log.info("Request from localhost. Automatically authenticating.");
@@ -60,11 +60,28 @@ public class ClerkAuthFilter extends OncePerRequestFilter {
             auth = attemptClerkAuth(request);
         }
         if (auth != null) {
+            log.info("Request authenticated: user={}", auth.getName());
             SecurityContext secCtx = SecurityContextHolder.createEmptyContext();
             secCtx.setAuthentication(auth);
             SecurityContextHolder.setContext(secCtx);
         }
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Don't run this authentication filter during ERROR dispatches.
+     * When an exception (for example NotFoundException) is thrown by a
+     * controller, Spring Boot forwards to the error handling path which
+     * goes through the filter chain again with DispatcherType.ERROR. If
+     * we try to authenticate (or fail to) during that dispatch it can
+     * interfere with the error handling and lead to wrong status codes
+     * (commonly a 403). Skipping the filter for ERROR dispatchs allows
+     * the standard HandlerExceptionResolver / BasicErrorController to
+     * produce the correct response (e.g. 404 for NotFoundException).
+     */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        return request.getDispatcherType() == DispatcherType.ERROR;
     }
 
     private boolean isLocalhost(HttpServletRequest request) {

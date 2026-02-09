@@ -18,7 +18,7 @@ import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.AudioDebugger;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.exceptions.ConflictException;
-import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.media.MediaContent;
 import org.raincityvoices.ttrack.service.storage.media.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
@@ -221,16 +221,6 @@ public abstract class AudioTrackTask<I extends AudioTrackTask.Input, O extends A
     }
 
     protected FileMetadata getMetadata(File file, String originalFileName) {
-        final FileMetadata metadata;
-        try {
-            log.info("Inspecting audio format for file {}", file);
-            AudioFileFormat format = fileManager().getAudioFileFormat(file);
-            metadata = FileMetadata.fromAudioFileFormat(format)
-                    .withFileName(StringUtils.defaultString(originalFileName, file.getName()));
-            log.info("File metadata: {}", metadata);
-        } catch (UnsupportedAudioFileException | IOException e) {
-            throw new RuntimeException("Failed to get format for audio file " + file);
-        }
-        return metadata;
+        return FileMetadata.fromFile(file, fileManager).withFileName(StringUtils.defaultString(originalFileName, file.getName()));
     }
 }

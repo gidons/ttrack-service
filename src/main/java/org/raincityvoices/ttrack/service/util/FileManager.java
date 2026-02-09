@@ -36,5 +36,6 @@ public interface FileManager {
     boolean exists(File file);
     boolean delete(File file);
     boolean rename(File oldName, File newName);
+    long getLengthBytes(File file);
     Temp.File tempFile(String prefix, String suffix) throws IOException;
 }

@@ -5,6 +5,7 @@ import java.io.InputStream;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
 
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;

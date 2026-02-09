@@ -12,6 +12,7 @@ public interface TimedDataStorage {
     @Builder
     public class TimedDataMetadata {
         String type;
+        String part;
         Instant created;
         Instant updated;
     }
@@ -19,4 +20,6 @@ public interface TimedDataStorage {
     List<TimedDataMetadata> listDataForSong(String songId);
     List<TimedTextDTO> getAllDataForSong(String songId);
     void putDataForSong(String songId, TimedTextDTO data);
+    List<TimedTextDTO> getAllDataForPart(String songId, String part);
+    TimedTextDTO getDataForPart(String songId, String part, String type);
 }

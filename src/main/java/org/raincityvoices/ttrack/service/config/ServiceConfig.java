@@ -5,9 +5,9 @@ import java.io.IOException;
 import java.time.Clock;
 
 import org.apache.commons.io.FileUtils;
+import org.raincityvoices.ttrack.service.storage.files.RemoteFileStorage;
 import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage;
 import org.raincityvoices.ttrack.service.storage.media.MediaStorage;
-import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage.RemoteStorage;
 import org.raincityvoices.ttrack.service.util.DefaultFileManager;
 import org.raincityvoices.ttrack.service.util.FileManager;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -39,7 +39,7 @@ public class ServiceConfig {
     private CacheConfig cache;
 
     @Bean
-    public MediaStorage mediaStorage(RemoteStorage remoteStorage) throws IOException {
+    public MediaStorage mediaStorage(RemoteFileStorage remoteStorage) throws IOException {
         FileUtils.forceMkdir(cache.directory);
         return new DiskCachingMediaStorage(remoteStorage, cache.directory);
     }

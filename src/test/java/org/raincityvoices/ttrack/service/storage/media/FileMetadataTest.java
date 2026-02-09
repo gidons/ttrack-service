@@ -10,7 +10,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.model.TestData;
-import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

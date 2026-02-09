@@ -43,6 +43,9 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable()) // Disable CSRF for API using Bearer tokens
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/public/**").permitAll() // Allow public access
+                // Allow the error path so HandlerExceptionResolver / BasicErrorController can
+                // generate proper responses (404, 400, etc.) instead of being blocked by security
+                .requestMatchers("/error", "/error/**").permitAll()
                 .anyRequest().authenticated() // Secure all other requests
                 // .anyRequest().permitAll()
             )

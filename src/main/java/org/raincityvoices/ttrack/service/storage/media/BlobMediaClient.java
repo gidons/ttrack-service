@@ -9,7 +9,9 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.time.Duration;
 
-import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage.RemoteStorage;
+import org.raincityvoices.ttrack.service.storage.files.DownloadUrlHelper;
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.files.RemoteFileStorage;
 import org.springframework.stereotype.Component;
 
 import com.azure.storage.blob.BlobClient;
@@ -40,13 +42,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
+public class BlobMediaClient implements RemoteFileStorage {
 
     private final BlobContainerClient mediaContainerClient;
     private final DownloadUrlHelper downloadUrlHelper;
 
     @Override
-    public FileMetadata downloadMedia(String location, FileMetadata currentMetadata, File destination) {
+    public FileMetadata download(String location, FileMetadata currentMetadata, File destination) {
         String currentETag = currentMetadata.etag();
         log.info("Downloading blob {} to local file {} (current ETag: {})", location, destination.getAbsolutePath(), currentETag);
         try (OutputStream stream = new BufferedOutputStream(new FileOutputStream(destination))) {
@@ -75,7 +77,7 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
     }
     
     @Override
-    public void uploadMedia(File source, String location) {        
+    public void upload(File source, String location) {        
         log.info("Uploading from {} to {}...", source.getAbsolutePath(), location);
         try {
             client(location).upload(new BufferedInputStream(new FileInputStream(source)), true);
@@ -93,7 +95,9 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
     public FileMetadata fetchMetadata(String location) {
         log.info("Fetching metadata for {}", location);
         try {
-            return FileMetadata.fromBlobProperties(client(location).getProperties());
+            FileMetadata metadata = FileMetadata.fromBlobProperties(client(location).getProperties());
+            log.debug("Metadata fetched: {}", metadata);
+            return metadata;
         } catch(BlobStorageException e) {
             if (e.getStatusCode() == 404) {
                 log.info("No blob named {} found", location);
@@ -110,7 +114,7 @@ public class BlobMediaClient implements DiskCachingMediaStorage.RemoteStorage {
         client(location).setHttpHeaders(metadata.toBlobHttpHeaders());
     }
 
-    public void deleteMedia(String location) {
+    public void delete(String location) {
         log.info("Deleting {}", location);
         client(location).deleteIfExists();
     }

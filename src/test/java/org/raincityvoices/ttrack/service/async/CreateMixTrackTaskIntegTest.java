@@ -19,7 +19,7 @@ import org.raincityvoices.ttrack.service.audio.model.StereoMix;
 import org.raincityvoices.ttrack.service.model.TestData;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
 import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
-import org.raincityvoices.ttrack.service.storage.media.FileMetadata;
+import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.media.MediaStorage;
 import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.songs.SongStorage;

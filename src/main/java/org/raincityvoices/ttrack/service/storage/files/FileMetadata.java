@@ -1,12 +1,24 @@
-package org.raincityvoices.ttrack.service.storage.media;
+package org.raincityvoices.ttrack.service.storage.files;
+
+import java.io.File;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.Objects;
 
 import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
+import org.raincityvoices.ttrack.service.util.FileManager;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.http.ContentDisposition;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.util.MimeTypeUtils;
+import org.springframework.util.comparator.Comparators;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.azure.storage.blob.models.BlobDownloadHeaders;
@@ -32,15 +44,22 @@ public class FileMetadata {
     @With String contentType;
     @With long lengthBytes;
     @With float durationSec;
+    @With Instant updated;
     @Default @With String etag = "";
 
     public static final FileMetadata UNKNOWN = FileMetadata.builder().build();
 
     public static FileMetadata fromMultipartFile(MultipartFile mpFile) {
+        String contentType = mpFile.getContentType();
+        if (contentType == null || contentType.equals(MediaType.APPLICATION_OCTET_STREAM_VALUE)) {
+            contentType = inferContentTypeFromName(mpFile.getOriginalFilename());
+        }
+        log.info("MPF content type: {}; inferred: {}", mpFile.getContentType(), contentType);
         return FileMetadata.builder()
                 .fileName(mpFile.getOriginalFilename())
-                .contentType(mpFile.getContentType())
+                .contentType(contentType)
                 .lengthBytes(mpFile.getSize())
+                .updated(Instant.now())
                 .build();
     }
 
@@ -49,6 +68,7 @@ public class FileMetadata {
                 .fileName(inferFileName(props.getContentDisposition()))
                 .contentType(props.getContentType())
                 .lengthBytes(props.getBlobSize())
+                .updated(props.getLastModified().toInstant())
                 .etag(props.getETag())
                 .build();
     }
@@ -58,8 +78,57 @@ public class FileMetadata {
                         .contentType(headers.getContentType())
                         .fileName(inferFileName(headers.getContentDisposition()))
                         .lengthBytes(headers.getContentLength())
+                        .updated(headers.getLastModified().toInstant())
                         .etag(headers.getETag())
                         .build();
+    }
+
+    public static FileMetadata fromFile(File file, FileManager fileManager) {
+        String contentTypeFromName = inferContentTypeFromName(file.getName());
+        final FileMetadata inferred = FileMetadata.builder()
+            .contentType(contentTypeFromName)
+            .lengthBytes(fileManager.getLengthBytes(file))
+            .fileName(file.getName())
+            .updated(Instant.ofEpochMilli(file.lastModified()))
+            .build();
+        log.info("File metadata inferred for file {}: {}", file, inferred);
+
+        FileMetadata fromAudio = null;
+        if (contentTypeFromName == null || contentTypeFromName.startsWith("audio")) {
+            fromAudio = inferFromFileContents(file, fileManager);
+            log.info("File metadata inferred from audio file {}: {}", file, fromAudio);
+        }
+        return FileMetadata.UNKNOWN.updateFrom(inferred).updateFrom(fromAudio);
+    }
+
+    /**
+     * Infer metadata for a file whose name and history are not reliable; we can only use
+     * the file contents (including its size).
+     */
+    public static FileMetadata fromTempFile(File file, FileManager fileManager) {
+        final FileMetadata fromContents = inferFromFileContents(file, fileManager);
+        return fromContents.withLengthBytes(fileManager.getLengthBytes(file));
+    }
+
+    private static String inferContentTypeFromName(String fileName) {
+        if (fileName == null) { return null; }
+        if (fileName.endsWith(".mxl")) {
+            // Zipped MusicXML file
+            return "application/zip";
+        }
+        return MediaTypeFactory.getMediaType(fileName).map(MediaType::getType).orElse(null);
+    }
+
+    private static FileMetadata inferFromFileContents(File file, FileManager fileManager) {
+        try {
+            AudioFileFormat format = fileManager.getAudioFileFormat(file);
+            return FileMetadata.fromAudioFileFormat(format);
+        } catch(IOException e) {
+            log.error("Unable to open file {}", file, e);
+        } catch(UnsupportedAudioFileException e) {
+            log.warn("Unsupported audio file format for file {}", file);
+        }
+        return FileMetadata.UNKNOWN;
     }
 
     public static FileMetadata fromAudioFileFormat(AudioFileFormat format) {
@@ -91,11 +160,16 @@ public class FileMetadata {
     }
 
     public FileMetadata updateFrom(FileMetadata other) {
+        if (other == null) {
+            return this;
+        }
+        
         return FileMetadata.builder()
                 .lengthBytes(other.lengthBytes() > 0 ? other.lengthBytes() : lengthBytes())
                 .contentType(other.contentType() != null ? other.contentType() : contentType())
                 .fileName(other.fileName() != null ? other.fileName() : fileName())
                 .durationSec(other.durationSec() > 0.0 ? other.durationSec() : durationSec())
+                .updated(ObjectUtils.max(other.updated(), updated()))
                 .etag(!StringUtils.isEmpty(other.etag()) ? other.etag() : etag())
                 .build();
     }
