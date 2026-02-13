@@ -203,6 +203,31 @@
 			<artifactId>mp3spi</artifactId>
 			<version>1.9.17</version>
 		</dependency>
+		<!-- MusicXML parser -->
+		<dependency>
+			<groupId>org.audiveris</groupId>
+			<artifactId>proxymusic</artifactId>
+			<version>4.0.1</version>
+			<scope>compile</scope>
+		</dependency>
+		<!-- Use JAXB 2 (javax) API and a compatible implementation so proxymusic's javax types are available -->
+		<!-- ProxyMusic has a problem upgrading to later versions of JAXB for some reason. -->
+		<dependency>
+			<groupId>javax.xml.bind</groupId>
+			<artifactId>jaxb-api</artifactId>
+			<version>2.3.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-impl</artifactId>
+			<version>2.3.3</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.activation</groupId>
+			<artifactId>javax.activation-api</artifactId>
+			<version>1.2.0</version>
+		</dependency>
 		<!-- Request/Response logging -->
 		<dependency>
 			<groupId>org.zalando</groupId>

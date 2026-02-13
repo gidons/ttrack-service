@@ -166,10 +166,16 @@ public class SongController {
     }
 
     @PutMapping({"/{id}/notation","/{id}/notation/"})
-    public void uploadNotationFile(@PathVariable("id") SongId songId, @RequestParam("file") MultipartFile file) throws IOException, UnsupportedAudioFileException {
+    public void uploadNotationFile(@PathVariable("id") SongId songId, @RequestParam("file") MultipartFile file) throws IOException {
         MediaContent content = MediaContent.fromMultipartFile(file);
         log.info("Inferred notation file metadata: {}", content.metadata());
         mediaStorage.putMedia(mediaStorage.locationFor(songId, NOTATION_FILE_ID), content);
+    }
+
+    @DeleteMapping({"/{id}/notation","/{id}/notation/"})
+    public void deleteNotationFile(@PathVariable("id") SongId songId) throws IOException, UnsupportedAudioFileException {
+        log.info("Deleting notation file");
+        mediaStorage.deleteMedia(mediaStorage.locationFor(songId, NOTATION_FILE_ID));
     }
 
     @GetMapping({"/{id}/parts","/{id}/parts/"})
@@ -260,7 +266,6 @@ public class SongController {
         mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
         track.setMediaLocation(mediaLocation);
         songStorage.writeTrack(track);
-        // taskManager.scheduleProcessUploadedTrackTask(track);
         taskManager.schedule(ProcessUploadedPartTask.class, track);
         return track;
     }
@@ -390,9 +395,17 @@ public class SongController {
         return Conversions.toTimedTextData(dtos);
     }
 
+    // TODO this does not return data for the "shared" part. Consider adding a flag to do that.
     @GetMapping({"/{id}/parts/{partName}/text","/{id}/parts/{partName}/text/"})
-    public TimedTextData getTimedDataForPart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part) {
+    public TimedTextData getTimedDataForPart(
+            @PathVariable("id") SongId songId, 
+            @PathVariable("partName") AudioPart part,
+            @QueryParam("includeShared") boolean includeShared) {
         List<TimedTextDTO> dtos = dataStorage.getAllDataForPart(songId.value(), part.name());
+        if (includeShared) {
+            List<TimedTextDTO> sharedDtos = dataStorage.getAllDataForPart(songId.value(), TimedTextData.SHARED_PART_NAME);
+            dtos = ImmutableList.<TimedTextDTO>builder().addAll(dtos).addAll(sharedDtos).build();
+        }
         return Conversions.toTimedTextData(dtos);
     }
 

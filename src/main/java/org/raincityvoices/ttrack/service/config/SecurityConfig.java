@@ -3,6 +3,7 @@ package org.raincityvoices.ttrack.service.config;
 import org.raincityvoices.ttrack.service.auth.ClerkAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -46,6 +47,7 @@ public class SecurityConfig {
                 // Allow the error path so HandlerExceptionResolver / BasicErrorController can
                 // generate proper responses (404, 400, etc.) instead of being blocked by security
                 .requestMatchers("/error", "/error/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS).permitAll()
                 .anyRequest().authenticated() // Secure all other requests
                 // .anyRequest().permitAll()
             )

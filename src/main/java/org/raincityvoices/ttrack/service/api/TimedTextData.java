@@ -30,6 +30,12 @@ public class TimedTextData {
         public static DataType of(String id) { return new DataType(id); }
     }
 
+    public static final String SHARED_PART_NAME = "ALL";
+    /**
+     * The "dummy" part that denotes the data shared by all parts.
+     */
+    public static final AudioPart SHARED_PART = new AudioPart(SHARED_PART_NAME);
+
     /** Song lyrics: text is the lyrics sung by each part. */
     public static final DataType TYPE_LYRICS = DataType.of("LYRICS");
     /** Song lyrics: text is the description of the bookmark, e.g. "Tag". */

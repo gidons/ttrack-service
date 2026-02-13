@@ -19,7 +19,7 @@ public class MediaContent {
     InputStream stream;
     FileMetadata metadata;
 
-    public static MediaContent fromMultipartFile(MultipartFile mpFile) throws IOException, UnsupportedAudioFileException {
+    public static MediaContent fromMultipartFile(MultipartFile mpFile) throws IOException {
         return new MediaContent(mpFile.getInputStream(), FileMetadata.fromMultipartFile(mpFile));
     }
 }
