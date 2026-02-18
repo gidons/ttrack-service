@@ -11,7 +11,7 @@ import org.raincityvoices.ttrack.service.exceptions.ConflictException;
 public interface SongStorage {
 
     /** @return The metadata for all songs in the system (empty list if none.) */ 
-    List<SongDTO> listAllSongs();
+    List<SongDTO> listAllSongs(boolean includeArchived);
     /** @return the metadata for the given song, if it exists; null if not. */
     SongDTO describeSong(String songId);
     /** 
@@ -19,6 +19,8 @@ public interface SongStorage {
      * @return the ID of the new or existing song.
      */
     String writeSong(SongDTO songDto);
+    boolean archiveSong(String songId);
+    boolean unarchiveSong(String songId);
     boolean deleteSong(String songId);
     /** @return the metadata for all tracks created for the given song (empty list if none.) */
     List<AudioTrackDTO> listParts(Optional<String> songId);

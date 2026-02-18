@@ -34,9 +34,9 @@ public class AzureTablesSongStorage implements SongStorage {
     }
 
     @Override
-    public List<SongDTO> listAllSongs() {
+    public List<SongDTO> listAllSongs(boolean includeArchived) {
         log.info("Listing all songs");
-        return songDao.query("RowKey eq ''");
+        return songDao.query("RowKey eq ''" + (includeArchived ? "" : " and not Archived"));
     }
 
     @Override
@@ -64,6 +64,30 @@ public class AzureTablesSongStorage implements SongStorage {
             return false;
         }
         return songDao.delete(songId, "");
+    }
+
+    @Override
+    public boolean archiveSong(String songId) {
+        Preconditions.checkNotNull(songId);
+        SongDTO dto = songDao.get(songId, "");
+        if (dto == null || dto.isArchived()) {
+            return false;
+        }
+        dto.setArchived(true);
+        songDao.put(dto);
+        return true;
+    }
+
+    @Override
+    public boolean unarchiveSong(String songId) {
+        Preconditions.checkNotNull(songId);
+        SongDTO dto = songDao.get(songId, "");
+        if (dto == null || !dto.isArchived()) {
+            return false;
+        }
+        dto.setArchived(false);
+        songDao.put(dto);
+        return true;
     }
 
     /**

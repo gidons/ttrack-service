@@ -52,6 +52,12 @@ public class SongDTO extends BaseDTO {
     /** Song duration in seconds, reflecting the original part tracks. Some mix tracks might have different duration. */
     private int durationSec;
 
+    /** 
+     * When true, this song won't be returned in default list queries. 
+     * TODO: At this time, un-archiving a song requires manual intervention.
+     */
+    private boolean archived;
+
     public String getRowKey() { return ""; }
     public void setRowKey(String rk) { if (!"".equals(rk)) throw new IllegalArgumentException("Unexpected RowKey '" + rk + "' set for SongDTO with ID '" + id + "'; expected empty string"); }
 
@@ -69,6 +75,7 @@ public class SongDTO extends BaseDTO {
             .arranger(song.getArranger())
             .key(song.getKey())
             .voicing(song.getVoicing())
+            .archived(false)
             .build();
         dto.setETag(song.getETag());
         return dto;

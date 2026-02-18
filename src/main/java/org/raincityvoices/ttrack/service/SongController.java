@@ -21,9 +21,9 @@ import org.raincityvoices.ttrack.service.api.MixTrack;
 import org.raincityvoices.ttrack.service.api.PartTrack;
 import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.api.Song.SongBuilder;
-import org.raincityvoices.ttrack.service.api.TimedTextData.DataType;
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.api.TimedTextData;
+import org.raincityvoices.ttrack.service.api.TimedTextData.DataType;
 import org.raincityvoices.ttrack.service.async.AsyncTaskManager;
 import org.raincityvoices.ttrack.service.async.AsyncTaskManager.TaskExec;
 import org.raincityvoices.ttrack.service.async.CreateMixTrackTask;
@@ -45,8 +45,8 @@ import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
 import org.raincityvoices.ttrack.service.storage.songs.SongDTO;
 import org.raincityvoices.ttrack.service.storage.songs.SongStorage;
 import org.raincityvoices.ttrack.service.storage.timeddata.TimedDataStorage;
-import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO;
 import org.raincityvoices.ttrack.service.storage.timeddata.TimedDataStorage.TimedDataMetadata;
+import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -64,8 +64,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 import org.springframework.web.util.DefaultUriBuilderFactory;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.util.DefaultUriBuilderFactory.EncodingMode;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.azure.core.annotation.QueryParam;
 import com.google.common.collect.ImmutableList;
@@ -101,8 +101,8 @@ public class SongController {
     }
 
     @GetMapping
-    public List<Song> listSongs(@QueryParam("extended") boolean extended) {
-        List<SongDTO> songs = songStorage.listAllSongs();
+    public List<Song> listSongs(@QueryParam("extended") boolean extended, @QueryParam("includeArchived") boolean includeArchived) {
+        List<SongDTO> songs = songStorage.listAllSongs(includeArchived);
         return songs.parallelStream()
             .map(dto -> toSong(dto, extended))
             .toList();
@@ -113,7 +113,7 @@ public class SongController {
         if (!extended) {
             return rawSong;
         }
-        String songId = dto.getId();
+    String songId = dto.getId();
         SongBuilder builder = rawSong.toBuilder();
         List<AudioTrackDTO> parts = songStorage.listParts(Optional.of(songId));
         builder.parts(parts.stream().map(AudioTrackDTO::getId).toList());
@@ -162,6 +162,8 @@ public class SongController {
         }
         SongDTO dto = SongDTO.fromSong(song);
         songStorage.writeSong(dto);
+        // TODO we may need to make more changes, e.g. if the title or short-title have changed,
+        // we need to change the track names to match.
         return dto.toSong();
     }
 
@@ -200,6 +202,7 @@ public class SongController {
 
     @DeleteMapping({"/{id}","/{id}/"})
     public void deleteSong(@PathVariable("id") SongId songId) {
+        songStorage.archiveSong(songId.value());
     }
 
     @GetMapping({"/{id}/parts/{partName}","/{id}/parts/{partName}/"})
