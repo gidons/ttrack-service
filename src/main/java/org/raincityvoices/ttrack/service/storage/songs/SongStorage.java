@@ -5,7 +5,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import java.util.List;
 import java.util.Optional;
 
-import org.raincityvoices.ttrack.service.api.Song;
 import org.raincityvoices.ttrack.service.exceptions.ConflictException;
 
 public interface SongStorage {

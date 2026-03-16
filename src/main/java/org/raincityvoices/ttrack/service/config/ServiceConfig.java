@@ -14,8 +14,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.azure.security.keyvault.secrets.SecretClient;
-
 import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -27,8 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class ServiceConfig {
-
-    private final SecretClient secretClient;
 
     @Data
     public static class CacheConfig {

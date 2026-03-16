@@ -10,6 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Async task that launches a RefreshMixTrackTask for every mix-track of the target song.
+ * 
+ * Note: currently, this task does not do any locking. This is technically safe - all it 
+ * does is create other AsnckTasks, and those will have locking as necessary - but it 
+ * might not be ideal.
+ */
 @PrototypeBean
 @Slf4j
 public class RefreshAllMixesTask extends AsyncTask<AsyncTask.Input, AsyncTask.Output> {

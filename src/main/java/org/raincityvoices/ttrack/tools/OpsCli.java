@@ -48,7 +48,6 @@ public class OpsCli implements CommandLineRunner {
     @RequiredArgsConstructor
     private static class GetToken implements Callable<Integer> {
         private final Clerk clerk;
-        private final String clerkApiKey;
 
         @Option(names = "-u")
         private String userId;

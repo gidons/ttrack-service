@@ -24,6 +24,39 @@ import com.microsoft.applicationinsights.core.dependencies.google.common.base.Pr
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * A disk-based caching implementation of {@link MediaStorage} that manages media files locally
+ * while delegating to a remote storage backend.
+ *
+ * <p>This class implements a two-tier storage strategy:
+ * <ul>
+ *   <li>Remote storage via {@link RemoteFileStorage} for persistent data and metadata
+ *   <li>Local disk cache for improved performance and offline access
+ * </ul>
+ *
+ * <p>Key features:
+ * <ul>
+ *   <li>Automatic caching of downloaded media with ETags for change detection
+ *   <li>Thread-safe operations using {@link ReentrantLock} per media location
+ *   <li>Lazy loading of media with metadata validation
+ *   <li>Configurable cache directory and file management
+ * </ul>
+ *
+ * <p>The cache uses media ETags as file identifiers to handle version updates efficiently.
+ * When media is modified remotely, the new version is downloaded and the old cached file
+ * is automatically replaced. Temporary download/upload files are used during transitions
+ * to ensure consistency.
+ *
+ * <p>A {@link LoadingCache} maintains per-location clients to manage concurrent access to
+ * different media items, with a maximum of 10 concurrent locations and 10 concurrent threads.
+ *
+ * Note that the term "media" here is used in its general HTTP sense of content,
+ * and not limited to audio/video/etc.
+ * 
+ * @see MediaStorage
+ * @see RemoteFileStorage
+ * @see FileMetadata
+ */
 @Slf4j
 public class DiskCachingMediaStorage implements MediaStorage {
 

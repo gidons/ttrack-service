@@ -1,3 +1,4 @@
+
 package org.raincityvoices.ttrack.service.audio;
 
 import java.nio.ByteBuffer;
@@ -13,6 +14,36 @@ import lombok.RequiredArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * A utility class for logging and debugging audio data during processing.
+ * It tracks elapsed time in audio frames and selectively logs audio buffers based on a time range.
+ * 
+ * <p>This class supports logging of both short and float audio buffers with formatted output
+ * that preserves multi-channel audio structure. It maintains frame count to calculate elapsed
+ * time relative to the audio format's frame rate.
+ * 
+ * <p>Logging is controlled by a {@link Settings} object that specifies:
+ * <ul>
+ *   <li>A time range (in seconds) during which logging should occur</li>
+ *   <li>Maximum number of samples to log per buffer</li>
+ * </ul>
+ * 
+ * <p>Example usage: log the input audio and processed output in the 5-to-6 second range:
+ * <pre>
+ *   AudioFormat format = new AudioFormat(44100, 16, 2, true, false);
+ *   AudioDebugger.Settings settings = new AudioDebugger.Settings(5.0, 6.0);
+ *   AudioDebugger debugger = new AudioDebugger("MyAudio", format, settings);
+ *   while (ByteBuffer inputBuffer = getNextBuffer() != null) {
+ *       debugger.logBuffer(inputBuffer);
+ *       ByteBuffer outputBuffer = processBuffer(inputBuffer);
+ *       debugger.logBuffer(outputBuffer);
+ *   }
+ * </pre>
+ * 
+ * @author [Author Name]
+ * @see AudioFormat
+ * @see Settings
+ */
 @Slf4j
 public class AudioDebugger {
 

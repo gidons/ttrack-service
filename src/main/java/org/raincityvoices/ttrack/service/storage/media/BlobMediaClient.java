@@ -24,20 +24,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * A MediaStorage implementation that uses Azure Blob Storage as the backend,
- * and caches files - both media and its metadata - locally on disk.
- * 
- * Caching happens both ways:
- * - On write (putMedia), the media stream is written as a file in the cache. Some metadata
- *   is then inferred (duration, content type) and written to disk as well. Finally, the
- *   media is uploaded to Blob storage, and the metadata is stored as Blob properties.
- * - On read (getMedia), the Blob's ETag is compared with the cached metadata, and if it's
- *   different, the stream is downloaded to the cache, then the metadata is updated as well.
- * 
- * Some notes and pitfalls:
- * - This class assumes that <em>all reads and writes flow through it</em>. This is important
- *   especially because if there are out-of-band writes, the metadata might be incorrect or
- *   incomplete.
+ * A MediaStorage implementation that persists to Azure Blob Storage.
+ * Media metadata is stored as blob properties.
+ * Note that the term "media" here is used in its general HTTP sense of content,
+ * and not limited to audio/video/etc.
  */
 @Slf4j
 @Component

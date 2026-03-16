@@ -12,6 +12,14 @@ import lombok.Value;
 import lombok.experimental.Accessors;
 import lombok.extern.jackson.Jacksonized;
 
+/**
+ * An {@link AudioMix} that mixes the input parts according to specific weights
+ * to a single output channel. The input weights must be non-negative and sum to 1.
+ * 
+ * For example, {@code MonoMix(0.4, 0.2, 0.2, 0.2)} will create a mono output
+ * where the first part is twice as loud as the others (assuming all parts are
+ * more or less the same volume).
+ */
 @Accessors(fluent = true)
 @Value
 @EqualsAndHashCode(exclude = "sample")

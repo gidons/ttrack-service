@@ -1,3 +1,4 @@
+
 package org.raincityvoices.ttrack.service.audio;
 
 import java.io.IOException;
@@ -19,6 +20,28 @@ import be.tarsos.dsp.io.TarsosDSPAudioFloatConverter;
 import be.tarsos.dsp.io.jvm.JVMAudioInputStream;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * An AudioStream that combines multiple audio input streams into a single output stream
+ * based on a specified {@link AudioMix}. All inputs must be mono and 16-bit-per-sample,
+ * the number of inputs must match the AudioMix's {@link AudioMix#numInputs() numInputs()}, 
+ * and the output will be 16-bits-per-sample and have as many channels as the AudioMix's
+ * {@link AudioMix#numOutputs() numOutputs()}.
+ * 
+ * <p>The mixing process converts input audio data (16-bit samples) to float buffers,
+ * applies the mixing logic via an {@link AudioMix} instance, and converts the result
+ * back to the output audio format.
+ * 
+ * <p>Typical usage:
+ * <pre>{@code
+ *   AudioInputStream[] inputs = { stream1, stream2 };
+ *   AudioMix mix = new AudioMix(...);
+ *   AudioMixingStream mixedStream = AudioMixingStream.create(inputs, mix, bufferFrames);
+ * }</pre>
+ * 
+ * @see AudioMix
+ * @see AudioInputStream
+ * @see AudioDebugger
+ */
 @Slf4j
 public class AudioMixingStream extends AudioInputStream {
 
@@ -51,7 +74,7 @@ public class AudioMixingStream extends AudioInputStream {
             // TODO validate matching
             this.inputFormat = inputStreams[0].getFormat();
             Preconditions.checkArgument(inputFormat.getSampleSizeInBits() == 16, 
-            "Input sample size is " + inputFormat.getSampleSizeInBits() + "; only 16 supported.");
+                    "Input sample size is " + inputFormat.getSampleSizeInBits() + "; only 16 supported.");
             Preconditions.checkArgument(inputFormat.getChannels() == 1,
             "At least one stream has more than one channel.");
             this.outputFormat = AudioFormats.forOutputChannels(inputFormat, mix.numOutputs());
@@ -153,18 +176,33 @@ public class AudioMixingStream extends AudioInputStream {
         super(mixingStream, mixingStream.outputFormat, AudioSystem.NOT_SPECIFIED);
     }
 
+    /**
+     * Same as {@link AudioMixingStream#create(AudioInputStream, AudioMix, int, AudioDebugger.Settings)}, with
+     * no debug logging.
+     */
     public static AudioMixingStream create(AudioInputStream inputStreams[], AudioMix mix, int bufferFrames) {
         MixingStream mixingStream = new MixingStream(inputStreams, mix, bufferFrames);
         return new AudioMixingStream(mixingStream);
     }
 
+    /**
+     * Create a new AudioMixingStream that combines the given streams using the given mix.
+     * @param inputStreams The streams to combine; must all be 16-bits-per-sample mono.
+     * @param mix The {@link AudioMix} to use for producing output samples. {@link AudioMix#numInputs() 
+     * mix.numInputs()} must match the number of input streams.
+     * @param bufferFrames The size of buffer to use for the output stream, in frames.
+     * @param debugSettings Settings for debug logging of input and output buffers (see {@link AudioDebugger}.
+     * @return An {@link AudioInputStream} that produces the desired mix, with 16-bits-per-sample
+     * and the same number of channels as {@link AudioMix#numOutputs() mix.numOutputs()}.
+     */
     public static AudioMixingStream create(AudioInputStream inputStreams[], AudioMix mix, int bufferFrames, AudioDebugger.Settings debugSettings) {
         MixingStream mixingStream = new MixingStream(inputStreams, mix, bufferFrames, debugSettings);
         return new AudioMixingStream(mixingStream);
     }
 
     /**
-     * Construct a new mixing stream that buffers one seecond of audio.
+     * Same as {@link AudioMixingStream#create(AudioInputStream, AudioMix, int)}, setting
+     * the buffer size to one second of audio.
      */
     public static AudioMixingStream create(AudioInputStream inputStreams[], AudioMix mix) {
         return create(inputStreams, mix, (int) inputStreams[0].getFormat().getFrameRate());

@@ -17,6 +17,9 @@ import com.azure.cosmos.implementation.guava25.base.Preconditions;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * An {@link AudioInputStream} that extracts one of the channels of an input stream.
+ */
 @Slf4j
 public class ChannelExtractingStream extends AudioInputStream {
 

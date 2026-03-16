@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
-import org.raincityvoices.ttrack.service.storage.BaseTablesDAO;
+import org.raincityvoices.ttrack.service.storage.BasicTablesDAO;
 import org.springframework.stereotype.Component;
 
 import com.azure.data.tables.TableClient;
@@ -19,8 +19,8 @@ public class AzureTablesSongStorage implements SongStorage {
 
     private final TableClient tableClient;
 
-    private final BaseTablesDAO<SongDTO> songDao;
-    private final BaseTablesDAO<AudioTrackDTO> trackDao;
+    private final BasicTablesDAO<SongDTO> songDao;
+    private final BasicTablesDAO<AudioTrackDTO> trackDao;
 
     private final Random random = new Random();
 
@@ -29,8 +29,8 @@ public class AzureTablesSongStorage implements SongStorage {
 
     public AzureTablesSongStorage(TableClient songsTableClient) {
         this.tableClient = songsTableClient;
-        this.songDao = new BaseTablesDAO<SongDTO>(SongDTO.class, tableClient);
-        this.trackDao = new BaseTablesDAO<AudioTrackDTO>(AudioTrackDTO.class, tableClient);
+        this.songDao = new BasicTablesDAO<SongDTO>(SongDTO.class, tableClient);
+        this.trackDao = new BasicTablesDAO<AudioTrackDTO>(AudioTrackDTO.class, tableClient);
     }
 
     @Override

@@ -32,8 +32,6 @@ import org.mockito.MockitoAnnotations;
 import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.storage.files.FileMetadata;
 import org.raincityvoices.ttrack.service.storage.files.RemoteFileStorage;
-import org.raincityvoices.ttrack.service.storage.media.DiskCachingMediaStorage;
-import org.raincityvoices.ttrack.service.storage.media.MediaContent;
 import org.raincityvoices.ttrack.service.util.FileManager;
 
 public class DiskCachingMediaStorageTest {

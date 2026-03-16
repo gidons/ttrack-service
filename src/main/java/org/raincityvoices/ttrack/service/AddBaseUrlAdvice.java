@@ -17,6 +17,20 @@ import com.google.common.collect.ImmutableSet;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * A {@link ResponseBodyAdvice} that allows response objects to provide back-links
+ * to the service that have the correct client-facing base URL, i.e. the one used
+ * by the client when sending the request. Note that this base URL is tricky to
+ * obtain at the container level, where the original HTTP request isn't available.
+ * 
+ * Response objects that contain such URLs should implement the interface
+ * {@link UriContainer}. The advice object checks whether the response is such
+ * an object, or - if it's a list - whether its elements are, and if so
+ * invokes {@link UriContainer#useBaseUrl(String) useBaseUrl}, passing the base URL.
+ * 
+ * Note: The advice applies only to responses with JSON/YAML/HTML media type,
+ * since those are the only ones likely to contain URLs in the first place.
+ */
 @Slf4j
 @ControllerAdvice
 public class AddBaseUrlAdvice implements ResponseBodyAdvice<Object> {
@@ -29,7 +43,6 @@ public class AddBaseUrlAdvice implements ResponseBodyAdvice<Object> {
 
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        log.debug("supports(): returnType.parameterType={}", returnType.getParameterType());
         return true;
     }
 

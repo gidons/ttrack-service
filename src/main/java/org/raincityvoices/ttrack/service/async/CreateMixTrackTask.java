@@ -1,10 +1,10 @@
 package org.raincityvoices.ttrack.service.async;
 
-import org.raincityvoices.ttrack.service.Conversions;
 import org.raincityvoices.ttrack.service.MediaUrlProvider;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.storage.mapper.Property;
 import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
+import org.raincityvoices.ttrack.service.util.Conversions;
 import org.raincityvoices.ttrack.service.util.PrototypeBean;
 
 import lombok.Data;
@@ -14,6 +14,9 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Async task that creates a new mix track. Most of the logic is implemented in the base class MixTrackTaskBase.
+ */
 @PrototypeBean
 @Slf4j
 public class CreateMixTrackTask extends MixTrackTaskBase<CreateMixTrackTask.Input, AudioTrackTask.Output> {

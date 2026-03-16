@@ -7,7 +7,8 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
+import org.raincityvoices.ttrack.service.storage.async.AsyncTaskDTO;
+import org.raincityvoices.ttrack.service.storage.async.AzureTablesAsyncTaskStorage;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -21,10 +22,45 @@ import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * - Input: information required to construct the task object, e.g. song/track ID, set by the caller.
- * - Result: the value returned by the task on completion.
- * @param <I> input parameters, passed to constructor.
- * @param <O> result type.
+ * Abstract base class for managing asynchronous tasks with persistence and lifecycle management.
+ * 
+ * This class provides a framework for executing long-running operations asynchronously while
+ * maintaining task state in persistent storage. It handles task initialization, execution,
+ * locking, and status tracking throughout the task lifecycle.
+ * 
+ * <h2>Task Lifecycle</h2>
+ * <ol>
+ *   <li><strong>SCHEDULED</strong>: Task is created and persisted via {@link #initialize()}</li>
+ *   <li><strong>PENDING</strong>: Task acquires lock and waits via {@link #execute()}</li>
+ *   <li><strong>RUNNING</strong>: Task begins processing via {@link #process()}</li>
+ *   <li><strong>SUCCEEDED/FAILED</strong>: Task completes with result or error</li>
+ * </ol>
+ * 
+ * <h2>Key Features</h2>
+ * <ul>
+ *   <li>Persistent task storage via {@link AzureTablesAsyncTaskStorage}</li>
+ *   <li>Distributed lock mechanism to prevent concurrent execution</li>
+ *   <li>Correlation ID tracking via MDC for request tracing</li>
+ *   <li>Comprehensive error handling and status updates</li>
+ *   <li>Hook methods for subclass customization ({@link #doInitialize()}, {@link #process()})</li>
+ * </ul>
+ * 
+ * <h2>Usage</h2>
+ * Subclasses must implement:
+ * <ul>
+ *   <li>{@link #getInputClass()} - Return the input parameter class</li>
+ *   <li>{@link #getTaskType()} - Return a unique identifier for the task type</li>
+ *   <li>{@link #doInitialize()} - Perform synchronous setup and validation</li>
+ *   <li>{@link #process()} - Perform the main asynchronous processing</li>
+ * </ul>
+ * 
+ * Optionally override {@link #waitForLock()} and {@link #releaseLock()} for custom locking behavior.
+ * 
+ * @param <I> Input parameter type, must extend {@link Input}
+ * @param <O> Output result type, must extend {@link Output}
+ * 
+ * @see AsyncTaskDTO
+ * @see AzureTablesAsyncTaskStorage
  */
 @Slf4j
 @RequiredArgsConstructor

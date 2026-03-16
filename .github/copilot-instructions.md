@@ -4,15 +4,31 @@ This file captures concise, concrete knowledge an AI coding assistant needs to b
 
 1. Big-picture
    - This is a Spring Boot 3.5 web service (entry: `ServiceApplication`).
-   - Primary domain: storing, serving and mixing song audio parts. Key packages:
-     - `org.raincityvoices.ttrack.service` — REST controllers and application wiring (`SongController`, `ServiceApplication`, `WebConfigurer`).
+   - Primary domain: storing and serving data for songs, primarily choral. Specifically:
+     - Storing and serving data, including audio tracks (categorized as `parts` and `mixes`, see below), text data (e.g. lyrics),
+       metadata (e.g. title, key, arranger), and other files (e.g. MusicXML).
+     - Part tracks are single-channel (mono) audio for a single part, e.g. Bass or Tenor. Given tracks for all parts, prepare and serve
+       mix tracks that combine the different parts into stereo audio with different weights, e.g. Bass on left-stereo and all other
+       parts on right-stereo.
+   - Key packages:
+     - `org.raincityvoices.ttrack.service` — REST controllers and application wiring (`SongController`, `ServiceApplication`, `WebConfigurer`), as well as some other Spring-related classes like `AddBaseUrlAdvice`.
+     - `org.raincityvoices.ttrack.service.api` - REST model classes, annotated for Java/JSON conversion.
+     - `org.raincityvoices.ttrack.service.exceptions` - standard exceptions that can be thrown by Spring controllers and converted to HTTP error codes.
+     - `org.raincityvoices.ttrack.service.auth` — authentication/authorization layer. Based on the Clerk SDK 
+        (see README here: https://raw.githubusercontent.com/clerk/clerk-sdk-java/refs/heads/main/README.md)
      - `org.raincityvoices.ttrack.service.audio` — audio processing utilities (mixing, streams).
      - `org.raincityvoices.ttrack.service.audio.model` — audio domain models (`AudioPart`, `AudioMix`, formats).
-     - `org.raincityvoices.ttrack.service.storage` — persistence DTOs, `SongStorage` abstraction used for Azure Table storage, and `MediaStorage` abstraction for Azure Blob storage. Also some internal model classes (`FileMetadata` and `MediaContent`).
-     - `org.raincityvoices.ttrack.service.tasks` - implementation of code for processing audio asynchronously.
-     - `org.raincityvoices.ttrack.service.api` - REST model classes.
-     - `org.raincityvoices.ttrack.service.util` - Utility classes, as well as the `FileManager` abstraction to simplify testing
-         without relying on the file system.
+     - `org.raincityvoices.ttrack.service.storage` — persistence layer. Most code is in sub-packages (see below), and the main package
+       contains some base classes, plus the persistence implementation for temporary files (e.g. generated zip files).
+     - `org.raincityvoices.ttrack.service.storage.files` — some common logic and interfaces related to file manipulation and storage.
+     - `org.raincityvoices.ttrack.service.storage.mapper` — helper library for storing Java objects in Azure Table Storage.
+     - `org.raincityvoices.ttrack.service.storage.async` — persistence for information about async tasks and their status in Azure Table Storage.
+     - `org.raincityvoices.ttrack.service.storage.media` — persistence for media files, including storage in Azure Blob Storage (BlobMediaClient) and a local-disk caching layer (DiskCachingMediaStorage). Also used for some files, like MusicXML, that aren't technically media.
+     - `org.raincityvoices.ttrack.service.storage.songs` — persistence for Song and AudioTrack metadata in Azure Table Stoarge.
+     - `org.raincityvoices.ttrack.service.storage.timeddata` — persistence for timestamped textual data, e.g. lyrics, in Azure Blob Storage.
+     - `org.raincityvoices.ttrack.service.async` - implementation of various asynchronous tasks, mostly for processing audio.
+     - `org.raincityvoices.ttrack.service.util` - Various utility classes, as well as the `FileManager` abstraction that helps
+       avoid dependency on the file system during tests.
      - `org.raincityvoices.ttrack.service.config` - Spring Java configurations.
 
 

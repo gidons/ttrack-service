@@ -11,7 +11,6 @@ import com.fasterxml.jackson.annotation.OptBoolean;
 /**
  * A representation of a specific way to mix specific audio parts into one or more output channels.
  */
-// TODO Add parameters for pitch shift and time stretch.
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "_type",
         requireTypeIdForSubtypes = OptBoolean.FALSE
 )

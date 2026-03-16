@@ -5,6 +5,10 @@ import org.raincityvoices.ttrack.service.util.PrototypeBean;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Async task that re-creates the mix for a given mix track, using its existing mix definition.
+ * Most of the logic is implemented in the base class MixTrackTaskBase.
+ */
 @PrototypeBean
 @Slf4j
 public class RefreshMixTrackTask extends MixTrackTaskBase<AudioTrackTask.Input, AudioTrackTask.Output> {

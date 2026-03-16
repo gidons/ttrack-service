@@ -1,7 +1,5 @@
 package org.raincityvoices.ttrack.tools;
 
-import static com.google.common.collect.ImmutableMap.of;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 
 import java.io.File;
@@ -11,25 +9,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 import org.audiveris.proxymusic.Lyric;
 import org.audiveris.proxymusic.Note;
-import org.audiveris.proxymusic.ScorePart;
 import org.audiveris.proxymusic.ScorePartwise;
-import org.audiveris.proxymusic.TextElementData;
 import org.audiveris.proxymusic.ScorePartwise.Part;
 import org.audiveris.proxymusic.ScorePartwise.Part.Measure;
+import org.audiveris.proxymusic.TextElementData;
 import org.audiveris.proxymusic.util.Marshalling;
-import org.raincityvoices.ttrack.tools.WavProcessor.ExtractChannel;
-import org.raincityvoices.ttrack.tools.WavProcessor.MixFiles;
-import org.raincityvoices.ttrack.tools.WavProcessor.ModifyAudio;
 
-import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
 
 public class NotationProcessor {
 

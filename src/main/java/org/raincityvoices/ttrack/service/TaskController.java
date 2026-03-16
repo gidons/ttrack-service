@@ -2,8 +2,8 @@ package org.raincityvoices.ttrack.service;
 
 import org.raincityvoices.ttrack.service.api.Task;
 import org.raincityvoices.ttrack.service.exceptions.NotFoundException;
-import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
-import org.raincityvoices.ttrack.service.storage.AsyncTaskStorage;
+import org.raincityvoices.ttrack.service.storage.async.AsyncTaskDTO;
+import org.raincityvoices.ttrack.service.storage.async.AsyncTaskStorage;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;

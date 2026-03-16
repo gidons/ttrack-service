@@ -6,6 +6,10 @@ import org.raincityvoices.ttrack.service.storage.mapper.ETag;
 import lombok.Data;
 import lombok.Getter;
 
+/**
+ * Base class for DTOs used to store data Azure Table Storage via {@link TableEntityMapper},
+ * providing representation for the always-present attribute {@code "ETag"}.
+ */
 @Data
 public class BaseDTO {
 

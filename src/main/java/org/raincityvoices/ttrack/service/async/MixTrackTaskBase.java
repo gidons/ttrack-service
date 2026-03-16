@@ -8,9 +8,7 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 
-import org.raincityvoices.ttrack.service.Conversions;
 import org.raincityvoices.ttrack.service.MediaUrlProvider;
-import org.raincityvoices.ttrack.service.MediaUrlProviderImpl;
 import org.raincityvoices.ttrack.service.api.MixInfo;
 import org.raincityvoices.ttrack.service.audio.AudioMixingStream;
 import org.raincityvoices.ttrack.service.audio.TarsosStreamAdapter;
@@ -19,7 +17,7 @@ import org.raincityvoices.ttrack.service.audio.model.AudioFormats;
 import org.raincityvoices.ttrack.service.audio.model.AudioPart;
 import org.raincityvoices.ttrack.service.storage.media.MediaContent;
 import org.raincityvoices.ttrack.service.storage.songs.AudioTrackDTO;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.raincityvoices.ttrack.service.util.Conversions;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -28,13 +26,21 @@ import com.azure.cosmos.implementation.guava25.base.Preconditions;
 import lombok.extern.slf4j.Slf4j;
 import vavi.sound.sampled.mp3.MpegAudioFileWriter;
 
+/**
+ * Base class for tasks that need to create a MixTrack. Implements most of the logic for performing the mix.
+ * Subclasses should define their input/output, perform any required initializations, initialize the track()
+ * with the target mix, and call performMix().
+ *
+ * Note: this class is an instance of "implementation inheritance", which is generally an anti-pattern; it
+ * might be cleaner to extract the shared mixing logic to a helper class. However, this class does also
+ * depend on AudioTrackTask.uploadStream(), so doing so is non-trivial and probably not worth the trouble.
+ */
 @Slf4j
 @Component
 @Scope("prototype")
 public abstract class MixTrackTaskBase<I extends AudioTrackTask.Input, O extends AudioTrackTask.Output> extends AudioTrackTask<I, O> {
 
     private List<AudioTrackDTO> partTracks;
-    private MediaUrlProviderImpl mediaUrlProvider;
 
     public MixTrackTaskBase(I input) {
         super(input);

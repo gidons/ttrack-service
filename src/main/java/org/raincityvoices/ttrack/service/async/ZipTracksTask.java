@@ -31,6 +31,46 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Asynchronous task for creating a ZIP file containing multiple tracks from a song.
+ * 
+ * <p>This task handles the process of packaging selected tracks from a song into a 
+ * single ZIP file, generating a temporary download URL, and returning the necessary 
+ * information for the user to download the zipped content.
+ * 
+ * <p><strong>Input Requirements:</strong>
+ * <ul>
+ *   <li>Song ID: The identifier of the song containing the tracks</li>
+ *   <li>Track IDs: A non-empty list of track identifiers to include in the ZIP</li>
+ * </ul>
+ * 
+ * <p><strong>Output:</strong>
+ * <ul>
+ *   <li>Download URL: A temporary URL for downloading the ZIP file (expires in 60 minutes)</li>
+ *   <li>Download URL Expiry: The timestamp when the download URL expires</li>
+ *   <li>ZIP File Name: The user-friendly filename for the downloaded ZIP archive</li>
+ * </ul>
+ * 
+ * <p><strong>Concurrency Notes:</strong>
+ * This task operates without locking since it only reads song and track data. 
+ * A potential race condition exists if a track is modified while being read, but 
+ * the impact is minimal (only resulting in an incorrect ZIP that can be recreated). 
+ * Implementing per-track locking was deemed unnecessarily complex.
+ * 
+ * <p><strong>Dependencies:</strong>
+ * <ul>
+ *   <li>{@link FileManager}: For managing temporary files during ZIP creation</li>
+ *   <li>{@link SongStorage}: For retrieving song metadata and validation</li>
+ *   <li>{@link MediaStorage}: For accessing individual track media content</li>
+ *   <li>{@link TempFileStorage}: For persisting and serving the final ZIP file</li>
+ * </ul>
+ * 
+ * @see AsyncTask
+ * @see FileManager
+ * @see SongStorage
+ * @see MediaStorage
+ * @see TempFileStorage
+ */
 @Slf4j
 @Accessors(fluent = true)
 @PrototypeBean

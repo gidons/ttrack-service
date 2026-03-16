@@ -10,6 +10,10 @@ import lombok.Getter;
 import lombok.Value;
 import lombok.experimental.Accessors;
 
+/**
+ * An implementation of {@link AudioMix} that creates a one-channel-per-part
+ * output, with output samples in the same order as the input parts.
+ */
 @Value
 @Accessors(fluent = true)
 @Getter(onMethod=@__(@JsonProperty()))

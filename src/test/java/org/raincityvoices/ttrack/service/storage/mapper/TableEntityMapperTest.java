@@ -21,7 +21,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.async.AudioTrackTask;
 import org.raincityvoices.ttrack.service.async.AudioTrackTask.Input;
-import org.raincityvoices.ttrack.service.storage.AsyncTaskDTO;
+import org.raincityvoices.ttrack.service.storage.async.AsyncTaskDTO;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.beans.BeanUtils;
 

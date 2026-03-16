@@ -4,18 +4,11 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.List;
 
-import org.springframework.web.util.UriBuilder;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 import lombok.Builder;
-import lombok.Getter;
 import lombok.Builder.Default;
-import lombok.experimental.NonFinal;
+import lombok.Getter;
 import lombok.Value;
 import lombok.extern.jackson.Jacksonized;
 

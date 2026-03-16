@@ -6,8 +6,6 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.base.Preconditions;
 
 import lombok.ToString;
@@ -16,8 +14,15 @@ import lombok.experimental.Accessors;
 import lombok.extern.jackson.Jacksonized;
 
 /**
- * Description of a mix of one or more audio channels with per-channel volume settings.
- * This can easily be generalized to more output channels, but for now we only need stereo.
+ * An {@link AudioMix} that mixes the input parts according to specific weights
+ * to a stereo (two-channel) output. The input weights for each channel must be
+ * non-negative and sum to 1.
+ * <p>
+ * For example, {@code StereoMix({0.25, 0.25, 0.25, 0.25}, {1.0, 0.0, 0.0, 0.0})}
+ * will produce an equally-mixed left channel, and the first input part as-is in
+ * the right channel.
+ * <p>
+ * Note: this class is _not_ thread-safe.
  */
 @Value
 @ToString(exclude = {"leftMix", "rightMix", "sample"})
@@ -39,6 +44,7 @@ public class StereoMix implements AudioMix {
 
     MonoMix leftMix;
     MonoMix rightMix;
+    // Pre-allocated array for doing the mixing in, to avoid reallocating for every sample.
     float[] sample;
 
     @JsonCreator

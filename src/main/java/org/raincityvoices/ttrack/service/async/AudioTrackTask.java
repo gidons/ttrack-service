@@ -12,7 +12,6 @@ import java.time.Instant;
 
 import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.UnsupportedAudioFileException;
 
 import org.raincityvoices.ttrack.service.api.SongId;
 import org.raincityvoices.ttrack.service.audio.AudioDebugger;
@@ -40,6 +39,38 @@ import lombok.ToString;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Abstract base class for asynchronous audio track processing tasks.
+ *
+ * <p>This class extends {@link AsyncTask} to provide a framework for performing long-running
+ * operations on audio tracks, such as processing, uploading, and metadata management. It handles
+ * task lifecycle management including initialization, lock acquisition/release, and persistence.
+ *
+ * <p><strong>Key Features:</strong>
+ * <ul>
+ *   <li>Distributed locking mechanism to prevent concurrent task execution on the same track</li>
+ *   <li>Automatic track and song data retrieval and persistence</li>
+ *   <li>Audio stream and file upload utilities with metadata management</li>
+ *   <li>Debug settings support for synchronous use-cases</li>
+ *   <li>Fluent API design for task input and output configuration</li>
+ * </ul>
+ *
+ * <p><strong>Subclass Responsibilities:</strong>
+ * Subclasses must implement {@link #processTrack()} to define the core audio processing logic.
+ * They may optionally override {@link #getLockTimeout()} to customize lock timeout duration.
+ *
+ * <p><strong>Thread Safety:</strong>
+ * This class uses optimistic locking via {@link #waitForLock()} and {@link #releaseLock()} to
+ * ensure that only one task processes a given track at a time. Lock acquisition polls at
+ * regular intervals with a configurable maximum wait time.
+ *
+ * @param <I> the input type, must extend {@link AudioTrackTask.Input}
+ * @param <O> the output type, must extend {@link AudioTrackTask.Output}
+ *
+ * @see AsyncTask
+ * @see AudioTrackDTO
+ * @see SongDTO
+ */
 @Slf4j
 @Getter(AccessLevel.PROTECTED)
 @Accessors(fluent = true)

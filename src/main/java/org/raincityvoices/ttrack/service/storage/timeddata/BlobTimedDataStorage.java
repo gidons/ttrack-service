@@ -2,7 +2,6 @@ package org.raincityvoices.ttrack.service.storage.timeddata;
 
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.raincityvoices.ttrack.service.util.JsonUtils;
 import org.springframework.stereotype.Component;
 

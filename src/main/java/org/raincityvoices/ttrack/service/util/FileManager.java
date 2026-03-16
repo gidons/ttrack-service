@@ -19,6 +19,8 @@ import javazoom.spi.mpeg.sampled.file.MpegFileFormatType;
  * <li>Abstract some of the file system operations so they can be tested and/or implemented in different ways
  * <li>Provide a useful place to implement some useful functionality, like exception and timeout handling.
  * </ul>
+ * 
+ * @see DefaultFileManager
  */
 public interface FileManager {
     AudioInputStream getAudioInputStream(File file) throws IOException, UnsupportedAudioFileException;

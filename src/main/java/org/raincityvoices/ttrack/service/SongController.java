@@ -46,6 +46,7 @@ import org.raincityvoices.ttrack.service.storage.songs.SongDTO;
 import org.raincityvoices.ttrack.service.storage.songs.SongStorage;
 import org.raincityvoices.ttrack.service.storage.timeddata.TimedDataStorage;
 import org.raincityvoices.ttrack.service.storage.timeddata.TimedDataStorage.TimedDataMetadata;
+import org.raincityvoices.ttrack.service.util.Conversions;
 import org.raincityvoices.ttrack.service.storage.timeddata.TimedTextDTO;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.MediaType;
@@ -62,10 +63,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.DefaultUriBuilderFactory.EncodingMode;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import com.azure.core.annotation.QueryParam;
 import com.google.common.collect.ImmutableList;
@@ -590,7 +589,4 @@ public class SongController {
         }
     }
 
-    private static UriComponentsBuilder getUriBuilder() {
-        return MvcUriComponentsBuilder.fromController(SongController.class);
-    }
 }

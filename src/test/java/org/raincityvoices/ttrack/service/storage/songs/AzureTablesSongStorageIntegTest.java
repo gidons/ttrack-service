@@ -6,8 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.raincityvoices.ttrack.service.exceptions.ConflictException;
-import org.raincityvoices.ttrack.service.storage.songs.AzureTablesSongStorage;
-import org.raincityvoices.ttrack.service.storage.songs.SongDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
