@@ -253,6 +253,25 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
+
+		<!-- Hermetic integration tests: run the app against an Azurite (Azure Storage
+		     emulator) container started by Testcontainers, so tests need no cloud
+		     access and run identically locally and in CI. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
@@ -306,12 +325,19 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
+					<!--
+					  Unit tests run here. Two kinds of tests are kept out:
+					  - *AzuriteTest: hermetic integration tests driven by the failsafe
+					    plugin below (they need a Docker/Azurite container).
+					  - *IntegTest: legacy integration tests that talk to real Azure and
+					    require `az login` plus seeded cloud data; run manually only.
+					-->
 					<excludes>
+						<exclude>**/*AzuriteTest.java</exclude>
 						<exclude>**/*IntegTest.java</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
-			<!--
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
@@ -324,11 +350,16 @@
 					</execution>
 				</executions>
 				<configuration>
+					<!--
+					  Hermetic integration tests only. These run the full app against an
+					  Azurite container (Testcontainers) and are safe to run in CI.
+					  Legacy *IntegTest classes are intentionally NOT included here.
+					-->
 					<includes>
-						<include>**/*IntegTest.java</include>
+						<include>**/*AzuriteTest.java</include>
 					</includes>
 				</configuration>
-			</plugin>-->
+			</plugin>
 			<plugin>
       			<groupId>com.azure.tools</groupId>
       			<artifactId>azure-sdk-build-tool</artifactId>

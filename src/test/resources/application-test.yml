@@ -1,0 +1,21 @@
+# Profile used by hermetic integration tests (*AzuriteTest).
+#
+# Azure Table/Blob endpoints are injected at runtime by AzuriteIntegrationTestBase
+# (they point at a Testcontainers-managed Azurite instance whose port is only
+# known once the container starts). The production AzureClients configuration is
+# excluded under this profile; AzuriteIntegrationTestBase.TestBeans supplies
+# Azurite-backed clients and test doubles for the services Azurite cannot provide
+# (Key Vault, Clerk, Cognitive Services, User Delegation SAS).
+
+service:
+  cache:
+    directory: ${java.io.tmpdir}/ttrack-service-test/cache
+
+# Keep metrics exporters inert during tests.
+management:
+  metrics:
+    export:
+      logging:
+        enabled: false
+      azuremonitor:
+        enabled: false

@@ -140,7 +140,9 @@ public class SongController {
     public Song createSong(@RequestBody Song song) {
         SongDTO dto = SongDTO.fromSong(song);
         songStorage.writeSong(dto);
-        updateAllChannelMix(song.getId().value());
+        // Use the stored DTO's ID: writeSong assigns a generated ID when the
+        // request body has none, and the all-channel mix must be keyed on that.
+        updateAllChannelMix(dto.getId());
         return dto.toSong();
     }
 
