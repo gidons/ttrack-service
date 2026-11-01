@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @SpringBootTest
-public class AzureTablesSongStorageIntegTest {
+public class AzureTablesSongStorageManualTest {
 
     private static final String SONG_ID = "12345678";
     private static final String SONG_TITLE = "The Test Song";

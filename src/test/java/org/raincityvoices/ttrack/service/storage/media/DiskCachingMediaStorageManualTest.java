@@ -36,7 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @SpringBootTest
-public class DiskCachingMediaStorageIntegTest {
+public class DiskCachingMediaStorageManualTest {
     
     private static final String FILENAME_WAV = "Sunshine Lead.wav";
     private static final String FILENAME_MP3 = "Sunshine Lead.mp3";

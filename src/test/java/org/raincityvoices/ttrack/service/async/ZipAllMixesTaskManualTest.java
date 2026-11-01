@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @SpringBootTest
-public class ZipAllMixesTaskIntegTest {
+public class ZipAllMixesTaskManualTest {
 
     @Autowired
     private AsyncTaskManager taskManager;

@@ -22,7 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
  * download URL: those require User Delegation SAS, which Azurite cannot mint.
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-class SongControllerAzuriteTest extends AzuriteIntegrationTestBase {
+class SongControllerIntegTest extends AzuriteIntegrationTestBase {
 
     @Test
     void createdSongCanBeFetchedById() {

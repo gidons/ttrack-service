@@ -20,7 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @SpringBootTest
-public class BlobTimedDataStorageIntegTest {
+public class BlobTimedDataStorageManualTest {
 
     private static final String DATA_TYPE_1 = "TEST_1";
     private static final String DATA_TYPE_2 = "TEST_2";

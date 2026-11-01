@@ -1,4 +1,4 @@
-# Profile used by hermetic integration tests (*AzuriteTest).
+# Profile used by hermetic integration tests (*IntegTest).
 #
 # Azure Table/Blob endpoints are injected at runtime by AzuriteIntegrationTestBase
 # (they point at a Testcontainers-managed Azurite instance whose port is only
