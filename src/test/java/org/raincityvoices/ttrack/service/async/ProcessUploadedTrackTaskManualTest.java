@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @SpringBootTest
-public class ProcessUploadedTrackTaskIntegTest {
+public class ProcessUploadedTrackTaskManualTest {
 
     private static final String TEST_PART_NAME = "Bass";
 

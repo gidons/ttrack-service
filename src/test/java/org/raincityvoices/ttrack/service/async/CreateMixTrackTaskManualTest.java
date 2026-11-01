@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @SpringBootTest
-public class CreateMixTrackTaskIntegTest {
+public class CreateMixTrackTaskManualTest {
 
     private static final StereoMix TEST_MIX = new StereoMix(
         new float[] { 0.2f, 0.3f, 0.4f, 0.1f }, 

@@ -327,14 +327,14 @@
 				<configuration>
 					<!--
 					  Unit tests run here. Two kinds of tests are kept out:
-					  - *AzuriteTest: hermetic integration tests driven by the failsafe
+					  - *IntegTest: hermetic integration tests driven by the failsafe
 					    plugin below (they need a Docker/Azurite container).
-					  - *IntegTest: legacy integration tests that talk to real Azure and
+					  - *ManualTest: integration tests that talk to real Azure and
 					    require `az login` plus seeded cloud data; run manually only.
 					-->
 					<excludes>
-						<exclude>**/*AzuriteTest.java</exclude>
 						<exclude>**/*IntegTest.java</exclude>
+						<exclude>**/*ManualTest.java</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -353,10 +353,10 @@
 					<!--
 					  Hermetic integration tests only. These run the full app against an
 					  Azurite container (Testcontainers) and are safe to run in CI.
-					  Legacy *IntegTest classes are intentionally NOT included here.
+					  The real-Azure *ManualTest classes are intentionally NOT included here.
 					-->
 					<includes>
-						<include>**/*AzuriteTest.java</include>
+						<include>**/*IntegTest.java</include>
 					</includes>
 				</configuration>
 			</plugin>
