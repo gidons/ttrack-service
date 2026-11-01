@@ -1,0 +1,34 @@
+name: CI
+
+# Build and test on pull requests and on pushes to branches other than main.
+# Pushes to main are built and tested by the deploy workflow
+# (main_shavit-ttrack.yml), so they are excluded here to avoid a redundant run.
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'microsoft'
+          cache: maven
+
+      # Runs unit tests (surefire) and the Azurite-backed integration tests
+      # (failsafe). The integration tests start an Azurite container via
+      # Testcontainers; the Docker daemon is available on ubuntu-latest, so no
+      # extra service configuration is needed.
+      - name: Build and test
+        run: ./mvnw -B verify

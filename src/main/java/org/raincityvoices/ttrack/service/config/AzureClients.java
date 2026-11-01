@@ -3,6 +3,7 @@ package org.raincityvoices.ttrack.service.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import com.azure.ai.speech.transcription.TranscriptionClient;
 import com.azure.ai.speech.transcription.TranscriptionClientBuilder;
@@ -21,8 +22,20 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+/**
+ * Builds the Azure SDK clients (Table, Blob, Key Vault, Cognitive Services) used
+ * throughout the service, authenticating with {@code DefaultAzureCredential}.
+ *
+ * <p>This configuration is excluded from the {@code test} profile. Hermetic
+ * integration tests run against an Azurite emulator over plain HTTP, which the
+ * Azure SDK refuses to use with an Azure AD bearer-token credential; those tests
+ * supply their own shared-key clients instead. The exclusion is scoped to the
+ * {@code test} profile so that other integration tests, which run against real
+ * Azure with no active profile, still get this configuration.
+ */
 @Configuration
 @ConfigurationProperties("azure")
+@Profile("!test")
 public class AzureClients {
 
     @Data
