@@ -101,9 +101,13 @@ Responses are JSON; `@CrossOrigin` is enabled.
 - `GET /songs/{id}/parts` — list part tracks.
 - `GET /songs/{id}/parts/{part}` — describe one part.
 - `PUT /songs/{id}/parts/{part}?overwrite` (multipart `audioFile`) — upload one
-  part; refreshes `All` mix; schedules `ProcessUploadedPartTask`.
+  part; refreshes `All` mix; schedules `ProcessUploadedPartTask`. Accepts an
+  optional `channel` query parameter (`0`/`1`) naming the target channel of a
+  stereo upload (see §7.4, planned).
 - `PUT /songs/{id}/parts?overwrite` (multi-file multipart) — upload many parts;
-  refreshes `All` mix; schedules `RefreshAllMixesTask`.
+  refreshes `All` mix; schedules `RefreshAllMixesTask`. Per-file part names come
+  from `part0`, `part1`, … form fields; per-file target channels come from
+  parallel `channel0`, `channel1`, … fields (see §7.4, planned).
 - `GET /songs/{id}/parts/{part}/media` — stream part audio.
 
 ### Mixes
@@ -275,7 +279,7 @@ Delegation Key (read-only, HTTPS-only, bounded validity).
 ### 7.2 Mix description grammar (`MixUtils`)
 
 `parseMix` / `parseStereoMix` turn a human description (or raw JSON) into an
-`AudioMix` (see requirements §3.4 for the grammar). Weight helpers
+`AudioMix` (see requirements §4.4 for the grammar). Weight helpers
 (`targetPartFactors`, `dominantPartFactors`, `equalMixFactors`) compute the L/R
 factor arrays; `PREDOMINANT_WEIGHT = 4.0`. `getParseableMixes` generates the
 default catalog (Full Mix; per-part Solo/Left/Dominant/Missing; all Duets).
@@ -285,9 +289,8 @@ default catalog (Full Mix; per-part Solo/Left/Dominant/Missing; all Duets).
 
 - `CustomAudioSystem` — a `javax.sound.sampled.AudioSystem` replacement that
   enumerates SPI providers but filters out a buggy Tritonus WAV reader.
-- `ChannelExtractingStream` — pulls one channel out of a multichannel stream.
-- `ChannelAnalyzer` — de-interleaves a stream; `isDuplicateStereo()` detects
-  "fake stereo" (both channels ~identical) so it can be collapsed to mono.
+- `ChannelExtractingStream` — pulls one channel out of a multichannel stream
+  (used by the planned stereo part-upload flow; see §7.4).
 - `AudioMixingStream` — the workhorse: combines N mono 16-bit inputs into one
   output per an `AudioMix`, converting PCM↔float via TarsosDSP. (Reads exactly
   the requested bytes per input, which can block — noted TODO.)
@@ -295,6 +298,40 @@ default catalog (Full Mix; per-part Solo/Left/Dominant/Missing; all Duets).
   `AudioDispatcher` (WSOLA time-stretch + `RateTransposer`) where
   `pitchFactor = 2^(-pitchShift/12)`, and bridges its push model to a pull-based
   `AudioInputStream` via a background thread and a bounded queue (backpressure).
+
+### 7.4 Part upload processing
+
+A part track is always stored as mono audio. The upload handler
+(`SongController.uploadOnePart`) streams the uploaded media straight to blob
+storage and records the track, then schedules `ProcessUploadedPartTask`; it does
+not buffer or inspect the media locally. Validation and any channel extraction
+happen in that async task. This split is intentional: streaming straight to the
+cloud keeps the request lightweight and lets the post-processing task run on a
+separate host. The tradeoff — no synchronous error for a malformed upload, and a
+plan to move the cheap checks earlier — is recorded in requirements §3.
+
+**Current behavior (`main`).** `ProcessUploadedPartTask.processTrack` reads the
+stored media and refreshes the track's metadata (duration) from it. It does not
+validate the format or channel count, so a mono upload works and anything else is
+accepted as-is and only fails later at mix time.
+
+**Planned behavior (stereo extraction).** Requirements §3 specifies supporting
+stereo uploads where the part is isolated on a target channel. The task will:
+1. Decode the media and require a supported format (WAV or MP3) and one or two
+   channels; otherwise fail with descriptive error details and leave the track
+   without usable media.
+2. For mono media, store it as the part as-is.
+3. For stereo media, determine the **target channel** — the `channel` value the
+   client supplied (`0`/`1`, per-file `channelN` in a multi-upload), or, if none,
+   identify it automatically from the audio content, failing clearly on low
+   confidence — then extract that channel to mono via `ChannelExtractingStream`
+   and store it.
+
+The automatic target-channel identification algorithm is not yet specified; the
+non-target channel may carry the same part (to within small differences) or a
+blend of other parts, and the algorithm must handle both. `ChannelAnalyzer`
+(de-interleaving and channel comparison) is expected to support this and is being
+developed on a feature branch.
 
 ## 8. Asynchronous task framework (`async`)
 
@@ -322,8 +359,9 @@ Concrete tasks:
 - `RefreshMixTrackTask` — re-render from the track's stored mix definition.
 - `RefreshAllMixesTask` — list a song's mixes and schedule a create task for each
   (no lock of its own; spawned tasks lock themselves).
-- `ProcessUploadedPartTask` — post-process an uploaded part: keep mono as-is,
-  collapse duplicate-stereo to mono, or mark genuinely-stereo audio unusable.
+- `ProcessUploadedPartTask` — post-process an uploaded part. On `main` it
+  refreshes the track's metadata from the stored media; the planned format
+  validation and stereo target-channel extraction are described in §7.4.
 - `ZipTracksTask` — stream selected track media into a ZIP, upload to
   `temp-files`, return a 60-minute SAS URL (read-only, no lock).
 

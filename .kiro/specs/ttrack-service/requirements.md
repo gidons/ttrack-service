@@ -33,6 +33,9 @@ manages the underlying data.
   flag. This is the canonical field set referenced by the requirements below.
 - **Part track** — single-channel (mono) audio for one voice part. Track ID is
   the part name (e.g. `Bass`).
+- **Target channel** — in a stereo upload for a single part, the channel (left =
+  `0` or right = `1`) that carries that part's audio. The service extracts the
+  target channel and stores it as the mono part track.
 - **Mix track** — audio produced by combining part tracks per a mix definition.
   Track ID is the mix name (e.g. `Bass Left`).
 - **Mix definition / `AudioMix`** — how N part inputs map to output channels with
@@ -131,37 +134,87 @@ remove songs, so that the catalog reflects the choir's repertoire.
 
 ### 3. Part track management
 
-**User story:** As a data manager, I want to upload and manage mono audio for
-each voice part, so that mixes can be generated and the player can download
-individual parts.
+**User story:** As a data manager, I want to upload and manage audio for each
+voice part — supplied either as mono, or as stereo with the part isolated on one
+channel — so that the service stores a clean mono part from which mixes can be
+generated and which the player can download.
+
+A single voice part is always stored as mono audio. Uploads may be supplied in
+two forms:
+- **mono** — stored as the part directly; or
+- **stereo** — the part is isolated on a **target channel** (see glossary); the
+  service extracts that channel and stores it as the mono part.
+
+> Unlike most of this document, the stereo-upload behavior below (the `channel`
+> parameter, stereo extraction, and target-channel identification) is **planned**
+> rather than fully implemented on `main`. It is specified here so the design and
+> implementation can follow.
 
 #### Acceptance criteria
 
 1. WHEN a client uploads audio for a single part (`PUT /songs/{id}/parts/{part}`)
-   THEN the service SHALL store the audio, create the part track if needed, and
-   schedule post-processing of the uploaded audio.
-2. IF a part already exists AND `overwrite` is not true THEN the upload SHALL be
+   THEN the service SHALL store the uploaded media, create the part track if
+   needed, and schedule post-processing of the uploaded audio.
+2. A single-part upload MAY include an optional `channel` query parameter (`0`
+   for left, `1` for right) naming the target channel of a stereo upload.
+3. IF a part already exists AND `overwrite` is not true THEN the upload SHALL be
    rejected with 409; WHEN `overwrite=true` THEN the existing part SHALL be
    replaced.
-3. WHEN a client uploads audio for multiple parts in one request
+4. WHEN a client uploads audio for multiple parts in one request
    (`PUT /songs/{id}/parts`) THEN the service SHALL store each file as the named
    part, SHALL reject the request with 400 IF the number of files and part names
    differ, and after upload SHALL refresh the `All` mix and schedule a refresh of
-   all existing mixes.
-4. WHEN uploaded part audio is processed THEN the service SHALL:
-   - leave genuinely mono audio as-is (updating duration/metadata);
-   - IF the audio is stereo but both channels are effectively identical,
-     collapse it to mono (keep the left channel);
-   - IF the audio is genuinely stereo (channels differ), mark the track as
-     having no usable media.
-5. WHEN a client lists parts for a song THEN the service SHALL return each part
+   all existing mixes. A target channel MAY be given per file via parallel
+   `channel0`, `channel1`, … form fields (alongside the existing per-file part
+   name fields). Each file SHALL be post-processed independently (per criteria
+   5–6); files SHALL NOT be assumed to share a form or target channel.
+5. WHEN uploaded part audio is post-processed THEN the service SHALL validate the
+   media and produce a mono part as follows:
+   - the media MUST be in a supported format (currently WAV or MP3) and have
+     either one or two channels; otherwise processing SHALL fail with a clear
+     error (see criterion 7);
+   - IF the media is mono (one channel) THEN it SHALL be stored as the part as-is
+     (updating duration/metadata);
+   - IF the media is stereo (two channels) THEN the service SHALL isolate the
+     target channel and store it as the mono part.
+6. WHEN post-processing a stereo upload THEN the service SHALL determine the
+   target channel as follows:
+   - IF the client specified a `channel` THEN that channel SHALL be used;
+   - OTHERWISE the service SHALL attempt to identify the target channel
+     automatically, and SHALL fail with a clear error (see criterion 7) IF it
+     cannot do so with high confidence.
+7. Validation and extraction (criteria 5–6) are performed in the asynchronous
+   post-processing task, not synchronously during the HTTP upload (see the design
+   note below). WHEN such processing fails (unsupported format, wrong channel
+   count, or low-confidence channel identification) THEN the task SHALL fail with
+   descriptive error details and the part SHALL be left without usable media.
+8. WHEN a client lists parts for a song THEN the service SHALL return each part
    track with its metadata, a track URL, and a time-limited media download URL.
-6. WHEN a client requests a specific part THEN the service SHALL return its
+9. WHEN a client requests a specific part THEN the service SHALL return its
    details, OR behave as not-found IF the part does not exist.
-7. WHEN a client downloads part media THEN the service SHALL stream the audio
-   with an appropriate content type and a `Content-Disposition` filename derived
-   from the song title and part name, OR return 404 IF the part or its media is
-   missing.
+10. WHEN a client downloads part media THEN the service SHALL stream the audio
+    with an appropriate content type and a `Content-Disposition` filename derived
+    from the song title and part name, OR return 404 IF the part or its media is
+    missing.
+
+> **Design note — validation is asynchronous (revisit later).** Format and
+> channel validation and channel extraction happen in the asynchronous
+> post-processing task rather than synchronously during the upload request. This
+> is intentional: the upload handler streams the media straight to cloud storage
+> rather than buffering it locally, which keeps the request lightweight and
+> allows the post-processing task to run on a separate host. The tradeoff is that
+> a client does not get a synchronous error for a malformed or wrong-shape
+> upload; it must observe the task outcome instead. Moving the cheap checks
+> (format, channel count) earlier — ideally to a synchronous 400 — is a planned
+> improvement.
+
+> **Note — target-channel auto-identification is unspecified.** When the client
+> does not supply `channel`, the service identifies the target channel from the
+> audio content. In a stereo upload the non-target channel may carry the same
+> part (to within small differences) or a blend of other parts; the
+> identification must handle both. The algorithm for this is not yet specified
+> and is out of scope for this requirement; only the observable behavior (use the
+> specified channel, else auto-identify, else fail clearly) is required here.
 
 ### 4. Mix track generation and management
 
