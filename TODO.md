@@ -10,6 +10,11 @@ Functionality
 - Detect "part-only" stereo uploads, where the target part is on both channels. They are currently
   rejected as ambiguous, because neither channel is pitched more than the other. Recognize identical
   (or nearly identical) channels and use either one. Low priority: the uploader can pass `channel`.
+- Explore uploading part audio to a temporary location, processing it there, and only when that
+  succeeds moving it to the part's final location. The existing part would stay intact until the
+  replacement is ready, a rejected upload would leave nothing to clean up, and nothing would read
+  half-processed audio. It could simplify several items below: blocking reads during processing,
+  reporting rejections, and task locking.
 - Make the reason an upload was rejected available to clients. Today a rejected part just loses its
   media. The reason is in the failed task's error details, but the upload endpoints don't return a
   task ID and the track doesn't record the error.
