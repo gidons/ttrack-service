@@ -19,8 +19,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import com.azure.ai.speech.transcription.TranscriptionClient;
@@ -63,7 +61,6 @@ import org.springframework.context.annotation.Import;
  *       the plan to test real download URLs.</li>
  * </ul>
  */
-@Testcontainers
 @ActiveProfiles("test")
 @Import(AzuriteIntegrationTestBase.TestBeans.class)
 public abstract class AzuriteIntegrationTestBase {
@@ -77,13 +74,25 @@ public abstract class AzuriteIntegrationTestBase {
     static final int BLOB_PORT = 10000;
     static final int TABLE_PORT = 10002;
 
-    @Container
+    /**
+     * One Azurite container is shared by all the integration tests in the JVM: it is started once
+     * and left running (Testcontainers' resource reaper removes it when the JVM exits).
+     *
+     * <p>It is deliberately not managed with the JUnit {@code @Container} lifecycle, which restarts
+     * the container, on a new port, for every test class. Spring caches the application context
+     * across test classes, so a cached context would keep pointing at the first container's port.
+     * Tests that need isolation from each other use their own song IDs instead.
+     */
     static final GenericContainer<?> AZURITE =
         new GenericContainer<>(DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite:latest"))
             .withExposedPorts(BLOB_PORT, TABLE_PORT)
             .withCommand("azurite", "--blobHost", "0.0.0.0", "--tableHost", "0.0.0.0")
             .waitingFor(Wait.forListeningPorts(BLOB_PORT, TABLE_PORT)
                 .withStartupTimeout(Duration.ofSeconds(60)));
+
+    static {
+        AZURITE.start();
+    }
 
     static String blobEndpoint() {
         return String.format("http://%s:%d/%s",

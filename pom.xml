@@ -329,8 +329,10 @@
 					  Unit tests run here. Two kinds of tests are kept out:
 					  - *IntegTest: hermetic integration tests driven by the failsafe
 					    plugin below (they need a Docker/Azurite container).
-					  - *ManualTest: integration tests that talk to real Azure and
-					    require `az login` plus seeded cloud data; run manually only.
+					  - *ManualTest: tests that need something the build can't provide: real
+					    Azure (requires `az login` plus seeded cloud data) or local files
+					    that aren't in the repository (e.g. the library tracks under data/).
+					    Run them manually, e.g. with -Dtest=<ClassName>.
 					-->
 					<excludes>
 						<exclude>**/*IntegTest.java</exclude>

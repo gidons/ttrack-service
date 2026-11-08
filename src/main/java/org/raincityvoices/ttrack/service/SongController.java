@@ -3,10 +3,12 @@ package org.raincityvoices.ttrack.service;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -216,12 +218,13 @@ public class SongController {
     public List<AudioTrackDTO> uploadMediaForMultipleParts(@PathVariable("id") SongId songId, @QueryParam("overwrite") boolean overwrite,
                                             @RequestParam Map<String, MultipartFile> fileFields, 
                                             @RequestParam Map<String, String> otherFields) throws Exception {
-        String[] partNames = otherFields.keySet().stream()
+        List<String> partFields = otherFields.keySet().stream()
             .filter(n -> n.startsWith("part"))
             .sorted()
+            .toList();
+        String[] partNames = partFields.stream()
             .map(otherFields::get)
-            .collect(Collectors.toList())
-            .toArray(new String[0]);
+            .toArray(String[]::new);
         MultipartFile[] files = fileFields.keySet().stream()
             .filter(n -> n.startsWith("file"))
             .sorted()
@@ -231,26 +234,62 @@ public class SongController {
         if (files.length != partNames.length) {
             throw new BadRequestException("Request specifies a different number of files (" + files.length +") and part names (" + partNames.length + ")");
         }
+        // The optional target channel for the part named by field "partN" is given by field "channelN".
+        Integer[] channels = partFields.stream()
+            .map(f -> parseChannel(otherFields.get("channel" + f.substring("part".length()))))
+            .toArray(Integer[]::new);
         ImmutableList.Builder<AudioTrackDTO> output = ImmutableList.builder();
+        List<Future<?>> processing = new ArrayList<>();
         for (int i = 0; i < files.length; ++i) {
             log.info("Uploading {} as part {}", files[i].getOriginalFilename(), partNames[i]);
-            AudioTrackDTO track = uploadOnePart(songId.value(), partNames[i], overwrite, files[i]);
-            output.add(track);
+            PartUpload upload = uploadOnePart(songId.value(), partNames[i], overwrite, files[i], channels[i]);
+            output.add(upload.track());
+            processing.add(upload.processing());
         }
         updateAllChannelMix(songId.value());
-        taskManager.schedule(RefreshAllMixesTask.class, songId.value());
+        // The mixes are built from the processed parts, so they must wait until the uploads have been processed.
+        taskManager.scheduleAfter(processing, RefreshAllMixesTask.class, songId.value());
         return output.build();
     }
 
     @PutMapping({"/{id}/parts/{partName}","/{id}/parts/{partName}/"})
     public String uploadMediaForPart(@PathVariable("id") SongId songId, @PathVariable("partName") AudioPart part, 
-                                     @QueryParam("overwrite") boolean overwrite, @RequestParam MultipartFile audioFile) throws Exception {
-        uploadOnePart(songId.value(), part.name(), overwrite, audioFile);
+                                     @QueryParam("overwrite") boolean overwrite,
+                                     @RequestParam(value = "channel", required = false) Integer channel,
+                                     @RequestParam MultipartFile audioFile) throws Exception {
+        validateChannel(channel);
+        uploadOnePart(songId.value(), part.name(), overwrite, audioFile, channel);
         updateAllChannelMix(songId.value());
         return part.name();
     }
 
-    private AudioTrackDTO uploadOnePart(String songId, String part, boolean overwrite, MultipartFile audioFile)
+    /** Parse the target channel of a stereo upload: 0 for left, 1 for right; blank means unspecified (null). */
+    private static Integer parseChannel(String value) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return validateChannel(Integer.valueOf(value.trim()));
+        } catch (NumberFormatException e) {
+            throw new BadRequestException("Invalid channel '" + value + "'; must be 0 (left) or 1 (right)");
+        }
+    }
+
+    private static Integer validateChannel(Integer channel) {
+        if (channel != null && channel != ProcessUploadedPartTask.LEFT && channel != ProcessUploadedPartTask.RIGHT) {
+            throw new BadRequestException("Invalid channel " + channel + "; must be 0 (left) or 1 (right)");
+        }
+        return channel;
+    }
+
+    /** A part track that has been uploaded, and the future completion of the task that processes the upload. */
+    private record PartUpload(AudioTrackDTO track, Future<?> processing) {}
+
+    /**
+     * Store the uploaded media for a part, and schedule its processing.
+     * @param channel the target channel of a stereo upload (0 = left, 1 = right), or null if unspecified.
+     */
+    private PartUpload uploadOnePart(String songId, String part, boolean overwrite, MultipartFile audioFile, Integer channel)
             throws IOException, UnsupportedAudioFileException {
         final AudioTrackDTO track;
         AudioTrackDTO existing = songStorage.describePart(songId, part);
@@ -270,8 +309,10 @@ public class SongController {
         mediaStorage.putMedia(mediaLocation, MediaContent.fromMultipartFile(audioFile));
         track.setMediaLocation(mediaLocation);
         songStorage.writeTrack(track);
-        taskManager.schedule(ProcessUploadedPartTask.class, track);
-        return track;
+        Future<?> processing = (channel == null)
+            ? taskManager.schedule(ProcessUploadedPartTask.class, track).result()
+            : taskManager.schedule(ProcessUploadedPartTask.class, track, channel).result();
+        return new PartUpload(track, processing);
     }
 
     @GetMapping({"/{id}/parts/{partName}/media","/{id}/parts/{partName}/media/"})

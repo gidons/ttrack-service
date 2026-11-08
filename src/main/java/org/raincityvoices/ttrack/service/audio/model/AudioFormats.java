@@ -60,6 +60,19 @@ public class AudioFormats {
             : AudioSystem.getAudioInputStream(toPcm(original.getFormat()), original);
     }
 
+    /**
+     * Like {@link #toPcmStream}, but also converts PCM streams whose samples are not 16 bits wide,
+     * so that the result is always 16-bit signed PCM.
+     * 
+     * @throws IllegalArgumentException if the conversion is not supported.
+     */
+    public static AudioInputStream toPcm16Stream(AudioInputStream original) {
+        AudioFormat format = original.getFormat();
+        return Encoding.PCM_SIGNED.equals(format.getEncoding()) && format.getSampleSizeInBits() == 16
+            ? original
+            : AudioSystem.getAudioInputStream(toPcm(format), original);
+    }
+
     public static AudioInputStream toMp3Stream(AudioInputStream original) {
         return Mp3LameFormatConversionProvider.MPEG1L3.equals(original.getFormat().getEncoding())
             ? original

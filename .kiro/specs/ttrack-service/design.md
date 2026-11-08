@@ -103,11 +103,12 @@ Responses are JSON; `@CrossOrigin` is enabled.
 - `PUT /songs/{id}/parts/{part}?overwrite` (multipart `audioFile`) — upload one
   part; refreshes `All` mix; schedules `ProcessUploadedPartTask`. Accepts an
   optional `channel` query parameter (`0`/`1`) naming the target channel of a
-  stereo upload (see §7.4, planned).
+  stereo upload (see §7.4); any other value is rejected with 400.
 - `PUT /songs/{id}/parts?overwrite` (multi-file multipart) — upload many parts;
   refreshes `All` mix; schedules `RefreshAllMixesTask`. Per-file part names come
   from `part0`, `part1`, … form fields; per-file target channels come from
-  parallel `channel0`, `channel1`, … fields (see §7.4, planned).
+  parallel `channel0`, `channel1`, … fields (see §7.4); an invalid value rejects the
+  whole request with 400 before anything is stored.
 - `GET /songs/{id}/parts/{part}/media` — stream part audio.
 
 ### Mixes
@@ -290,7 +291,10 @@ default catalog (Full Mix; per-part Solo/Left/Dominant/Missing; all Duets).
 - `CustomAudioSystem` — a `javax.sound.sampled.AudioSystem` replacement that
   enumerates SPI providers but filters out a buggy Tritonus WAV reader.
 - `ChannelExtractingStream` — pulls one channel out of a multichannel stream
-  (used by the planned stereo part-upload flow; see §7.4).
+  (used to isolate the target channel of a stereo part upload; see §7.4).
+- `TargetChannelDetector` — identifies which channel of a stereo part-predominant
+  track carries the part, by comparing pitch-detection confidence per channel
+  (§7.5).
 - `AudioMixingStream` — the workhorse: combines N mono 16-bit inputs into one
   output per an `AudioMix`, converting PCM↔float via TarsosDSP. (Reads exactly
   the requested bytes per input, which can block — noted TODO.)
@@ -308,30 +312,100 @@ not buffer or inspect the media locally. Validation and any channel extraction
 happen in that async task. This split is intentional: streaming straight to the
 cloud keeps the request lightweight and lets the post-processing task run on a
 separate host. The tradeoff — no synchronous error for a malformed upload, and a
-plan to move the cheap checks earlier — is recorded in requirements §3.
+plan to move the cheap checks earlier — is recorded in requirements §3. The
+handler does validate the cheap, request-level inputs synchronously: a `channel`
+that is not `0` or `1` is rejected with 400 before anything is stored.
 
-**Current behavior (`main`).** `ProcessUploadedPartTask.processTrack` reads the
-stored media and refreshes the track's metadata (duration) from it. It does not
-validate the format or channel count, so a mono upload works and anything else is
-accepted as-is and only fails later at mix time.
+`ProcessUploadedPartTask` (input: the track and an optional target channel):
+1. Sniffs the stored media and requires a supported format (WAV or MP3) and one
+   or two channels. Format readers fail in inconsistent ways on arbitrary bytes,
+   so any failure of this step means "not a recognizable audio file".
+2. For mono media, keeps it as is and refreshes the track's metadata. A `channel`
+   given for mono media is ignored.
+3. For stereo media, determines the **target channel** — the `channel` the client
+   supplied (`0`/`1`; per-file `channelN` form fields in a multi-upload), or, if
+   none, the one identified by `TargetChannelDetector` (§7.5) — then extracts that
+   channel to mono with `ChannelExtractingStream` and stores it in the same
+   container format as the upload (MP3 in, MP3 out; WAV in, WAV out) through
+   `AudioTrackTask.uploadStream`. Extraction from WAV is lossless; MP3 is
+   re-encoded.
+4. If the media can't be used (unrecognizable, unsupported format, wrong channel
+   count, damaged, or no confidently identifiable target channel) the task fails
+   with a message addressed to the uploader, clears the track's media location and
+   duration, and deletes the uploaded blob. The message for an unidentifiable
+   channel tells the uploader to resubmit with an explicit `channel`.
 
-**Planned behavior (stereo extraction).** Requirements §3 specifies supporting
-stereo uploads where the part is isolated on a target channel. The task will:
-1. Decode the media and require a supported format (WAV or MP3) and one or two
-   channels; otherwise fail with descriptive error details and leave the track
-   without usable media.
-2. For mono media, store it as the part as-is.
-3. For stereo media, determine the **target channel** — the `channel` value the
-   client supplied (`0`/`1`, per-file `channelN` in a multi-upload), or, if none,
-   identify it automatically from the audio content, failing clearly on low
-   confidence — then extract that channel to mono via `ChannelExtractingStream`
-   and store it.
+Each pass over the media (sniffing, detection, extraction) opens the stored media
+afresh from the local disk cache, so nothing is buffered in memory beyond one
+analysis window.
 
-The automatic target-channel identification algorithm is not yet specified; the
-non-target channel may carry the same part (to within small differences) or a
-blend of other parts, and the algorithm must handle both. `ChannelAnalyzer`
-(de-interleaving and channel comparison) is expected to support this and is being
-developed on a feature branch.
+Because a part's media is only final once this task has run, anything built from
+the parts must wait for it. The multi-part upload therefore schedules
+`RefreshAllMixesTask` with `AsyncTaskManager.scheduleAfter`, which holds the task
+back until the upload tasks have finished (whether or not they succeeded). Waiting
+occupies a pool thread, which cannot deadlock: the pool's queue is FIFO and the
+prerequisites were submitted first, so they have already started by the time the
+waiting task gets a thread. A mix requested while an upload of one of its parts is
+still being processed is not guarded against and will fail or use the unprocessed
+media.
+
+### 7.5 Target-channel identification (`TargetChannelDetector`)
+
+In a stereo part-predominant track the target channel carries one voice
+(monophonic), while the other channel carries either the same voice or a blend in
+which the other parts are present (polyphonic, at a similar or lower level).
+Pitch detectors report a confident pitch on monophonic material and fail on
+polyphonic material, so the channel in which a pitch is detected in markedly more
+frames is the target channel.
+
+Algorithm (one streaming pass over 16-bit PCM, two `FastYin` detectors):
+1. Split the audio into non-overlapping windows of 2048 samples per channel.
+2. A window is *active* in a channel if its RMS is at least 0.003 (full scale
+   1.0). A window counts toward the comparison if it is active in either channel.
+3. A channel is *pitched* in a window if it is active and `FastYin` reports a
+   pitch of 60–1400 Hz. `FastYin`'s default absolute threshold (0.20, i.e.
+   confidence ≥ 0.80) is used as is; no separate threshold is tuned.
+4. Let `L` and `R` be the fractions of counted windows in which each channel is
+   pitched, and `margin = (L − R) / (L + R)`. The target is the channel with the
+   larger fraction, provided:
+   - at least 50 windows were counted (about 2.3 s of audio at 44.1 kHz),
+   - `|margin| ≥ 0.20`, and
+   - the winning channel is pitched in at least 50% of counted windows.
+
+   Otherwise identification fails (insufficient audio, or no channel is clearly
+   the target — e.g. both channels part-predominant, a full mix, or identical
+   channels).
+
+Evidence behind the choices (experiment `experiments/ChannelPitchExperiment.java`,
+run on 5 songs × 4 parts of real stereo tracks from the choir library — target
+left in four songs and right in one, with varying amounts of bleed from the other
+parts — plus 30 synthetic "both channels part-predominant" cases made by pairing
+two parts' target channels, plus one real full-mix file):
+- Every real file selected the correct channel, with margins from 0.34 to 0.66;
+  every negative case was rejected, with margins of at most 0.05. The 0.20 limit
+  sits well inside that gap.
+- Results are identical for any confidence threshold from 0.50 to 0.80 (the
+  detector's own threshold dominates) and degrade above 0.85, which is why the
+  default is used untouched. They are also identical across energy gates from
+  0.001 to 0.03 and window sizes from 1024 to 4096. The window is 2048 because
+  it can resolve pitches down to about 43 Hz, leaving headroom for bass voices.
+- `FastYin` is used rather than `McLeodPitchMethod`: MPM had comparable margins
+  but lower pitched fractions (falsely rejecting two real files against the 50%
+  guard) and was about 25× slower (157 s versus 6 s for the whole data set),
+  since its cost per window is quadratic.
+- The whole file is analyzed rather than an excerpt. Short excerpts never chose
+  the wrong channel but rejected valid files (18 of 20 real files at 5 s, 4 at
+  10 s, 0 at 60 s with the weakest margin falling to 0.27), because intros are
+  often silent or instrumental. Analysis costs about 0.15 s per channel for a
+  3-minute track.
+- The 50% winner guard is a sanity check that no real file came close to
+  tripping (the weakest winner was pitched in 75% of windows); it has not been
+  calibrated against adversarial input and should be revisited with more data.
+
+Known limitations: the evidence covers five songs, so the thresholds should be
+re-checked as more material is uploaded. A "solo" stereo file with the target
+voice identical on both channels has no distinguishing margin and is rejected;
+callers can supply `channel` explicitly for such files.
 
 ## 8. Asynchronous task framework (`async`)
 
@@ -339,7 +413,9 @@ developed on a feature branch.
   `schedule(TaskClass, ctorArgs...)` obtains a **prototype-scoped** task bean from
   the Spring context (so collaborators are injected), calls `initialize()`
   synchronously (validation + persist a SCHEDULED record), then submits
-  `execute()` to the pool, returning a `TaskExec(task, Future)`.
+  `execute()` to the pool, returning a `TaskExec(task, Future)`. `scheduleAfter`
+  does the same but holds `execute()` back until the given prerequisite futures
+  have completed (see §7.4).
 - `AsyncTask<I extends Input, O extends Output>` — lifecycle base. Each task has a
   random UUID id. `execute()`: PENDING → acquire lock → RUNNING → `process()` →
   SUCCEEDED (store output) / FAILED (store error) with lock released in `finally`.
@@ -359,9 +435,8 @@ Concrete tasks:
 - `RefreshMixTrackTask` — re-render from the track's stored mix definition.
 - `RefreshAllMixesTask` — list a song's mixes and schedule a create task for each
   (no lock of its own; spawned tasks lock themselves).
-- `ProcessUploadedPartTask` — post-process an uploaded part. On `main` it
-  refreshes the track's metadata from the stored media; the planned format
-  validation and stereo target-channel extraction are described in §7.4.
+- `ProcessUploadedPartTask` — validate an uploaded part's media and turn it into
+  the part's mono audio, extracting the target channel of a stereo upload (§7.4).
 - `ZipTracksTask` — stream selected track media into a ZIP, upload to
   `temp-files`, return a 60-minute SAS URL (read-only, no lock).
 

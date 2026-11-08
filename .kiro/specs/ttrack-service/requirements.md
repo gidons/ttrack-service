@@ -145,18 +145,14 @@ two forms:
 - **stereo** — the part is isolated on a **target channel** (see glossary); the
   service extracts that channel and stores it as the mono part.
 
-> Unlike most of this document, the stereo-upload behavior below (the `channel`
-> parameter, stereo extraction, and target-channel identification) is **planned**
-> rather than fully implemented on `main`. It is specified here so the design and
-> implementation can follow.
-
 #### Acceptance criteria
 
 1. WHEN a client uploads audio for a single part (`PUT /songs/{id}/parts/{part}`)
    THEN the service SHALL store the uploaded media, create the part track if
    needed, and schedule post-processing of the uploaded audio.
 2. A single-part upload MAY include an optional `channel` query parameter (`0`
-   for left, `1` for right) naming the target channel of a stereo upload.
+   for left, `1` for right) naming the target channel of a stereo upload. Any
+   other value SHALL be rejected with 400, before anything is stored.
 3. IF a part already exists AND `overwrite` is not true THEN the upload SHALL be
    rejected with 409; WHEN `overwrite=true` THEN the existing part SHALL be
    replaced.
@@ -164,10 +160,14 @@ two forms:
    (`PUT /songs/{id}/parts`) THEN the service SHALL store each file as the named
    part, SHALL reject the request with 400 IF the number of files and part names
    differ, and after upload SHALL refresh the `All` mix and schedule a refresh of
-   all existing mixes. A target channel MAY be given per file via parallel
+   all existing mixes. The refresh of the existing mixes SHALL NOT start until
+   post-processing of all the uploaded files has finished, because mixes are built
+   from the processed parts. A target channel MAY be given per file via parallel
    `channel0`, `channel1`, … form fields (alongside the existing per-file part
-   name fields). Each file SHALL be post-processed independently (per criteria
-   5–6); files SHALL NOT be assumed to share a form or target channel.
+   name fields); an invalid value SHALL cause the whole request to be rejected
+   with 400, before anything is stored. Each file SHALL be post-processed
+   independently (per criteria 5–6); files SHALL NOT be assumed to share a form or
+   target channel.
 5. WHEN uploaded part audio is post-processed THEN the service SHALL validate the
    media and produce a mono part as follows:
    - the media MUST be in a supported format (currently WAV or MP3) and have
@@ -208,13 +208,16 @@ two forms:
 > (format, channel count) earlier — ideally to a synchronous 400 — is a planned
 > improvement.
 
-> **Note — target-channel auto-identification is unspecified.** When the client
-> does not supply `channel`, the service identifies the target channel from the
-> audio content. In a stereo upload the non-target channel may carry the same
-> part (to within small differences) or a blend of other parts; the
-> identification must handle both. The algorithm for this is not yet specified
-> and is out of scope for this requirement; only the observable behavior (use the
-> specified channel, else auto-identify, else fail clearly) is required here.
+> **Note — target-channel auto-identification.** When the client does not supply
+> `channel`, the service identifies the target channel from the audio content: in
+> a stereo upload the target channel carries a single voice, while the other
+> channel carries the same voice or a blend that includes other parts. A file in
+> which neither channel is clearly the target (for example, both channels are
+> part-predominant, or the channels are identical) is not identifiable and is
+> handled per criterion 7; the client can resubmit with an explicit `channel`.
+> The algorithm is described in the design (§7.5); this requirement only
+> specifies the observable behavior (use the specified channel, else
+> auto-identify, else fail clearly).
 
 ### 4. Mix track generation and management
 
